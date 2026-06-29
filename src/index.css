@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-[#070c1a] font-sans text-slate-200 antialiased;
+    letter-spacing: -0.011em;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-white/10;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-white/20;
+  }
+
+  /* Autofill: keep the dark glass look */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #e2e8f0;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_-20px_rgba(8,12,30,0.85),0_8px_40px_-16px_rgba(29,87,219,0.45)] backdrop-blur-2xl;
+  }
+  /* premium gradient hairline along the top edge */
+  .glass-card::before {
+    content: '';
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(143, 186, 255, 0.6),
+      rgba(255, 255, 255, 0.85),
+      rgba(143, 186, 255, 0.6),
+      transparent
+    );
+  }
+  /* soft inner sheen */
+  .glass-card::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 rounded-[1.75rem];
+    background: radial-gradient(120% 80% at 50% -10%, rgba(91, 146, 251, 0.12), transparent 60%);
+  }
+
+  .glass-input {
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-11 py-3 text-sm text-slate-100 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] outline-none transition-all duration-200 placeholder:text-slate-500;
+  }
+  .glass-input:hover {
+    @apply border-white/20;
+  }
+  .glass-input:focus {
+    @apply border-brand-400/70 bg-white/[0.06] ring-4 ring-brand-500/20 shadow-[0_0_0_1px_rgba(47,109,240,0.35),0_8px_24px_-8px_rgba(29,87,219,0.6)];
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-white via-brand-100 to-brand-300 bg-clip-text text-transparent;
+  }
+
+  .font-display {
+    font-family: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
