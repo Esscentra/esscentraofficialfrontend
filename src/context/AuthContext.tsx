@@ -7,7 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { fetchMe, login as loginApi, logout as logoutApi } from '@/lib/authApi';
+import { login as loginApi, logout as logoutApi } from '@/lib/authApi';
+import { getProfile } from '@/lib/userApi';
 import type { User } from '@/types';
 
 interface AuthContextValue {
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let active = true;
-    fetchMe()
+    getProfile()
       .then((u) => {
         if (active) setUserState(u);
       })
@@ -83,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    const u = await fetchMe();
+    const u = await getProfile();
     setSessionHint(true);
     setUserState(u);
   }, []);

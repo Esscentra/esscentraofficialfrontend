@@ -2,6 +2,16 @@ import api from './api';
 import { mapAccount, type RawAccount } from './authApi';
 import type { ApiResponse, User } from '@/types';
 
+/**
+ * GET /users/profile
+ * Returns the full profile (incl. phone + profileImage) for the signed-in user.
+ * Preferred over /auth/me, which omits phone and profileImage.
+ */
+export async function getProfile(): Promise<User> {
+  const { data } = await api.get<ApiResponse<RawAccount>>('/users/profile');
+  return mapAccount(data.data);
+}
+
 export interface UpdateProfileInput {
   firstName?: string;
   lastName?: string;
