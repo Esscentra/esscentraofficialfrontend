@@ -1,11 +1,12 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 /**
  * Base URL of the Esscentra REST API.
  * Configurable via `VITE_API_BASE_URL`; falls back to the local backend.
  */
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:4000/api/v1';
+  import.meta.env.VITE_API_BASE_URL?.trim() ||
+  "https://esscentraofficialbackend.onrender.com/api/v1";
 
 /**
  * Normalized error thrown for any non-2xx response (or network/timeout failure).
@@ -17,7 +18,7 @@ export class ApiError extends Error {
 
   constructor(message: string, status = 0, code?: string) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
     this.code = code;
   }
@@ -25,7 +26,7 @@ export class ApiError extends Error {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
   withCredentials: true, // send/receive httpOnly auth cookies
   timeout: 20_000,
 });
@@ -44,23 +45,31 @@ function toApiError(error: AxiosError<ErrorPayload>): ApiError {
     const message =
       (Array.isArray(raw) ? raw[0] : raw) ||
       (status >= 500
-        ? 'Something went wrong on our end. Please try again.'
-        : 'Request failed. Please try again.');
+        ? "Something went wrong on our end. Please try again."
+        : "Request failed. Please try again.");
     return new ApiError(message, status, error.code);
   }
-  if (error.code === 'ECONNABORTED') {
-    return new ApiError('The request timed out. Please try again.', 0, error.code);
+  if (error.code === "ECONNABORTED") {
+    return new ApiError(
+      "The request timed out. Please try again.",
+      0,
+      error.code,
+    );
   }
-  return new ApiError('Cannot reach the server. Check your connection and try again.', 0, error.code);
+  return new ApiError(
+    "Cannot reach the server. Check your connection and try again.",
+    0,
+    error.code,
+  );
 }
 
 /** Endpoints that must never trigger a refresh-retry (avoids loops). */
-function isAuthEndpoint(url = ''): boolean {
+function isAuthEndpoint(url = ""): boolean {
   return (
-    url.includes('/auth/login') ||
-    url.includes('/auth/register') ||
-    url.includes('/auth/refresh-token') ||
-    url.includes('/auth/logout')
+    url.includes("/auth/login") ||
+    url.includes("/auth/register") ||
+    url.includes("/auth/refresh-token") ||
+    url.includes("/auth/logout")
   );
 }
 
@@ -72,7 +81,7 @@ let refreshPromise: Promise<void> | null = null;
 function refreshSession(): Promise<void> {
   if (!refreshPromise) {
     refreshPromise = api
-      .post('/auth/refresh-token')
+      .post("/auth/refresh-token")
       .then(() => undefined)
       .finally(() => {
         refreshPromise = null;
@@ -88,7 +97,12 @@ api.interceptors.response.use(
     const status = error.response?.status;
 
     // On a 401, try a one-time silent refresh, then replay the original request.
-    if (status === 401 && original && !original._retry && !isAuthEndpoint(original.url)) {
+    if (
+      status === 401 &&
+      original &&
+      !original._retry &&
+      !isAuthEndpoint(original.url)
+    ) {
       original._retry = true;
       try {
         await refreshSession();
