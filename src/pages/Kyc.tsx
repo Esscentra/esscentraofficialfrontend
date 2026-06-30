@@ -7,12 +7,14 @@ import { z } from 'zod';
 import {
   ArrowLeft,
   BadgeCheck,
+  Camera,
   Clock,
   FileCheck2,
   ShieldCheck,
   Upload,
   XCircle,
 } from 'lucide-react';
+import { CameraCapture } from '@/components/ui/CameraCapture';
 import { AuroraBackground } from '@/components/AuroraBackground';
 import { Logo } from '@/components/Logo';
 import { Input } from '@/components/ui/Input';
@@ -281,9 +283,9 @@ function SubmitForm({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <FilePicker label="Front image" required onPick={(f) => setFiles((s) => ({ ...s, front: f }))} />
-        <FilePicker label="Back image" onPick={(f) => setFiles((s) => ({ ...s, back: f }))} />
-        <FilePicker label="Selfie" required onPick={(f) => setFiles((s) => ({ ...s, selfie: f }))} />
+        <FilePicker label="Front image" required capture="environment" onPick={(f) => setFiles((s) => ({ ...s, front: f }))} />
+        <FilePicker label="Back image" capture="environment" onPick={(f) => setFiles((s) => ({ ...s, back: f }))} />
+        <FilePicker label="Selfie" required capture="user" camera="user" onPick={(f) => setFiles((s) => ({ ...s, selfie: f }))} />
       </div>
 
       <div className="flex justify-end pt-2">
@@ -298,41 +300,87 @@ function SubmitForm({
 function FilePicker({
   label,
   required,
+  capture,
+  camera,
   onPick,
 }: {
   label: string;
   required?: boolean;
+  /** On mobile, open the camera directly: "user" = front (selfie), "environment" = rear. */
+  capture?: 'user' | 'environment';
+  /** When set, the tile opens the webcam (works on laptops too) instead of the file dialog. */
+  camera?: 'user' | 'environment';
   onPick: (file: File) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [name, setName] = useState<string | null>(null);
+  const [camOpen, setCamOpen] = useState(false);
 
-  const handle = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const accept = (file: File) => {
     setName(file.name);
     onPick(file);
   };
 
+  const handle = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) accept(file);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => ref.current?.click()}
-      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-5 text-center text-xs transition ${
-        name
-          ? 'border-brand-400/50 bg-brand-500/10 text-brand-100'
-          : 'border-white/15 bg-white/[0.02] text-slate-400 hover:border-brand-400/40 hover:text-brand-200'
-      }`}
-    >
-      <Upload className="h-4 w-4" />
-      <span className="font-medium">
-        {label}
-        {required && <span className="text-rose-400"> *</span>}
-      </span>
-      <span className="max-w-[10rem] truncate text-[11px] text-slate-500">
-        {name ?? 'PNG / JPG'}
-      </span>
-      <input ref={ref} type="file" accept="image/*" onChange={handle} className="hidden" />
-    </button>
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => (camera ? setCamOpen(true) : ref.current?.click())}
+        onKeyDown={(e) =>
+          (e.key === 'Enter' || e.key === ' ') &&
+          (e.preventDefault(), camera ? setCamOpen(true) : ref.current?.click())
+        }
+        className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-5 text-center text-xs transition ${
+          name
+            ? 'border-brand-400/50 bg-brand-500/10 text-brand-100'
+            : 'border-white/15 bg-white/[0.02] text-slate-400 hover:border-brand-400/40 hover:text-brand-200'
+        }`}
+      >
+        {camera ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+        <span className="font-medium">
+          {label}
+          {required && <span className="text-rose-400"> *</span>}
+        </span>
+        <span className="max-w-[10rem] truncate text-[11px] text-slate-500">
+          {name ?? (camera ? 'Take a photo' : 'PNG / JPG')}
+        </span>
+        {camera && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              ref.current?.click();
+            }}
+            className="text-[11px] text-brand-300 underline-offset-2 hover:underline"
+          >
+            or upload a file
+          </button>
+        )}
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          capture={capture}
+          onChange={handle}
+          className="hidden"
+        />
+      </div>
+
+      {camera && (
+        <CameraCapture
+          open={camOpen}
+          onClose={() => setCamOpen(false)}
+          onCapture={accept}
+          facingMode={camera}
+          fileName={`${label.toLowerCase().replace(/\s+/g, '-')}.jpg`}
+        />
+      )}
+    </>
   );
 }
