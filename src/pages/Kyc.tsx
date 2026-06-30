@@ -283,8 +283,8 @@ function SubmitForm({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <FilePicker label="Front image" required capture="environment" onPick={(f) => setFiles((s) => ({ ...s, front: f }))} />
-        <FilePicker label="Back image" capture="environment" onPick={(f) => setFiles((s) => ({ ...s, back: f }))} />
+        <FilePicker label="Front image" required capture="environment" camera="environment" onPick={(f) => setFiles((s) => ({ ...s, front: f }))} />
+        <FilePicker label="Back image" capture="environment" camera="environment" onPick={(f) => setFiles((s) => ({ ...s, back: f }))} />
         <FilePicker label="Selfie" required capture="user" camera="user" onPick={(f) => setFiles((s) => ({ ...s, selfie: f }))} />
       </div>
 
