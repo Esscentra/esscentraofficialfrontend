@@ -31,6 +31,10 @@ export type OpportunityStage =
 
 export interface Opportunity {
   id: string;
+  /** The account (company) this deal belongs to — required by the backend. */
+  accountId: string;
+  /** Optional contact at that account. */
+  contactId?: string;
   title: string;
   description?: string;
   amount: number;
