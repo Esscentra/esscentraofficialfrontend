@@ -22,7 +22,7 @@ function BrandPanel() {
   const Icon = active.icon;
 
   return (
-    <div className="relative hidden flex-col justify-between overflow-hidden rounded-l-3xl bg-gradient-to-br from-brand-600/55 via-brand-800/45 to-[#070c1a] p-10 lg:flex">
+    <div className="brand-panel relative hidden flex-col justify-between overflow-hidden rounded-l-3xl bg-gradient-to-br from-brand-600/55 via-brand-800/45 to-[#070c1a] p-10 lg:flex">
       <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-400/20 blur-3xl animate-float" />
       <div className="relative">
         <Logo />

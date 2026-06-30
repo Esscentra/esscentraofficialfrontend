@@ -225,3 +225,44 @@ html[data-theme='reading'] .text-gradient {
 html[data-theme='reading'] .font-display {
   font-family: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
 }
+
+/* ------------------- Brand panel stays dark in every theme ----------------- */
+/* The login hero is a dark gradient with light text. Light/Reading themes      */
+/* would otherwise flip its text dark and wash out the gradient, so we pin it.   */
+html[data-theme='light'] .brand-panel,
+html[data-theme='reading'] .brand-panel {
+  background-color: #0a1226 !important;
+}
+html[data-theme='light'] .brand-panel .text-white,
+html[data-theme='reading'] .brand-panel .text-white {
+  color: #ffffff;
+}
+html[data-theme='light'] .brand-panel .text-slate-200,
+html[data-theme='reading'] .brand-panel .text-slate-200 {
+  color: rgba(255, 255, 255, 0.85);
+}
+html[data-theme='light'] .brand-panel .text-slate-300,
+html[data-theme='reading'] .brand-panel .text-slate-300,
+html[data-theme='light'] .brand-panel [class*='text-slate-300'],
+html[data-theme='reading'] .brand-panel [class*='text-slate-300'] {
+  color: rgba(255, 255, 255, 0.8);
+}
+html[data-theme='light'] .brand-panel .text-slate-400,
+html[data-theme='reading'] .brand-panel .text-slate-400,
+html[data-theme='light'] .brand-panel [class*='text-slate-400'],
+html[data-theme='reading'] .brand-panel [class*='text-slate-400'] {
+  color: rgba(255, 255, 255, 0.6);
+}
+html[data-theme='light'] .brand-panel [class*='bg-white/'],
+html[data-theme='reading'] .brand-panel [class*='bg-white/'] {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+html[data-theme='light'] .brand-panel [class*='border-white/'],
+html[data-theme='reading'] .brand-panel [class*='border-white/'] {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+/* The gradient "agency" word: keep its bright on-dark gradient. */
+html[data-theme='light'] .brand-panel .text-gradient,
+html[data-theme='reading'] .brand-panel .text-gradient {
+  background-image: linear-gradient(90deg, #ffffff, #d9e7ff, #8fbaff);
+}
