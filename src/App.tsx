@@ -1,5 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -24,88 +23,84 @@ import UsersPage from './pages/app/Users';
 import KycReviewPage from './pages/app/KycReview';
 
 export default function App() {
-  const location = useLocation();
-  // Key transitions by the top-level segment so navigating between /app/* pages
-  // doesn't remount the dashboard shell (only entering/leaving a section does).
-  const sectionKey = location.pathname.split('/')[1] || 'root';
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={sectionKey}>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route
-          path="/login"
-          element={
-            <GuestRoute>
-              <Login />
-            </GuestRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <GuestRoute>
-              <Register />
-            </GuestRoute>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <GuestRoute>
-              <ForgotPassword />
-            </GuestRoute>
-          }
-        />
+      {/* Auth screens — only for signed-out visitors */}
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <GuestRoute>
+            <Register />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <GuestRoute>
+            <ForgotPassword />
+          </GuestRoute>
+        }
+      />
 
-        {/* These work whether or not a user is signed in (links come from email) */}
-        <Route path="/verify-email/:token" element={<VerifyEmail />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+      {/* These work whether or not a user is signed in (links come from email) */}
+      <Route path="/verify-email/:token" element={<VerifyEmail />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/kyc"
-          element={
-            <ProtectedRoute>
-              <Kyc />
-            </ProtectedRoute>
-          }
-        />
+      {/* Standalone authenticated screens */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kyc"
+        element={
+          <ProtectedRoute>
+            <Kyc />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Dashboard workspace (sidebar + topbar shell) */}
-        <Route
-          path="/app"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="kyc-review" element={<KycReviewPage />} />
-          <Route path="leads" element={<LeadsPage />} />
-          <Route path="opportunities" element={<OpportunitiesPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
-          <Route path="tasks" element={<TasksPage />} />
-          <Route path="contacts" element={<ContactsPage />} />
-          <Route path="inquiries" element={<InquiriesPage />} />
-          <Route path="blog" element={<BlogPage />} />
-          <Route path="newsletter" element={<NewsletterPage />} />
-          <Route path="roles" element={<RolesPage />} />
-        </Route>
+      {/* Dashboard workspace (sidebar + topbar shell) */}
+      <Route
+        path="/app"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Dashboard />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="kyc-review" element={<KycReviewPage />} />
+        <Route path="leads" element={<LeadsPage />} />
+        <Route path="opportunities" element={<OpportunitiesPage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="tasks" element={<TasksPage />} />
+        <Route path="contacts" element={<ContactsPage />} />
+        <Route path="inquiries" element={<InquiriesPage />} />
+        <Route path="blog" element={<BlogPage />} />
+        <Route path="newsletter" element={<NewsletterPage />} />
+        <Route path="roles" element={<RolesPage />} />
+      </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AnimatePresence>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
