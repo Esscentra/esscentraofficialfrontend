@@ -85,6 +85,30 @@ export interface Contact {
   createdAt?: string;
 }
 
+/* --------------------------------- Account --------------------------------- */
+/**
+ * A CRM company/organization (the business you work with) — parent of
+ * Contacts, Opportunities and Projects. Mirrors the backend Account model.
+ */
+export interface Account {
+  id: string;
+  companyName: string;
+  website?: string;
+  industry?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  logo?: string;
+  notes?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  /** Populated owner name from the backend (ownerId → user). */
+  ownerName?: string;
+  createdAt?: string;
+}
+
 /* ----------------------------- Contact inquiry ----------------------------- */
 export type InquiryStatus = 'NEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED';
 

@@ -14,6 +14,7 @@ import LeadsPage from './pages/app/Leads';
 import OpportunitiesPage from './pages/app/Opportunities';
 import ProjectsPage from './pages/app/Projects';
 import TasksPage from './pages/app/Tasks';
+import AccountsPage from './pages/app/Accounts';
 import ContactsPage from './pages/app/Contacts';
 import InquiriesPage from './pages/app/Inquiries';
 import BlogPage from './pages/app/Blog';
@@ -91,6 +92,7 @@ export default function App() {
         <Route path="kyc-review" element={<KycReviewPage />} />
         <Route path="leads" element={<LeadsPage />} />
         <Route path="opportunities" element={<OpportunitiesPage />} />
+        <Route path="accounts" element={<AccountsPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="contacts" element={<ContactsPage />} />

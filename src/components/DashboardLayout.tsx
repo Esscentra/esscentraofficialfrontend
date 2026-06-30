@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
+  Building,
   Building2,
   FileText,
   FolderKanban,
@@ -31,6 +32,7 @@ const NAV = [
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
   { to: '/app/leads', label: 'Leads', icon: Users },
   { to: '/app/opportunities', label: 'Opportunities', icon: Target },
+  { to: '/app/accounts', label: 'Accounts', icon: Building },
   { to: '/app/projects', label: 'Projects', icon: FolderKanban },
   { to: '/app/tasks', label: 'Tasks', icon: ListChecks },
   { to: '/app/contacts', label: 'Contacts', icon: Building2 },

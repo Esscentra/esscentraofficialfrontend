@@ -132,6 +132,7 @@ export default function Kyc() {
             {canSubmit && (
               <SubmitForm
                 resubmitting={!!record}
+                previous={record}
                 onDone={async (next) => {
                   setRecord(next);
                   toast.success('KYC submitted', 'We’ll notify you once it’s reviewed.');
@@ -198,9 +199,12 @@ function Detail({ label, value }: { label: string; value: string }) {
 
 function SubmitForm({
   resubmitting,
+  previous,
   onDone,
 }: {
   resubmitting: boolean;
+  /** Previous submission — used to prefill the form when resubmitting after a rejection. */
+  previous?: KycRecord | null;
   onDone: (record: KycRecord) => void | Promise<void>;
 }) {
   const toast = useToast();
@@ -212,7 +216,13 @@ function SubmitForm({
     formState: { errors, isSubmitting },
   } = useForm<KycValues>({
     resolver: zodResolver(kycSchema),
-    defaultValues: { fullName: '', dateOfBirth: '', documentType: 'AADHAR', documentNumber: '' },
+    defaultValues: {
+      fullName: previous?.fullName ?? '',
+      // <input type="date"> needs YYYY-MM-DD.
+      dateOfBirth: previous?.dateOfBirth ? previous.dateOfBirth.slice(0, 10) : '',
+      documentType: previous?.documentType ?? 'AADHAR',
+      documentNumber: previous?.documentNumber ?? '',
+    },
   });
 
   const onSubmit = async (values: KycValues) => {
