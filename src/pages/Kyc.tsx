@@ -293,9 +293,9 @@ function SubmitForm({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <FilePicker label="Front image" required capture="environment" camera="environment" onPick={(f) => setFiles((s) => ({ ...s, front: f }))} />
-        <FilePicker label="Back image" capture="environment" camera="environment" onPick={(f) => setFiles((s) => ({ ...s, back: f }))} />
-        <FilePicker label="Selfie" required capture="user" camera="user" onPick={(f) => setFiles((s) => ({ ...s, selfie: f }))} />
+        <FilePicker label="Front image" required camera="environment" onPick={(f) => setFiles((s) => ({ ...s, front: f }))} />
+        <FilePicker label="Back image" camera="environment" onPick={(f) => setFiles((s) => ({ ...s, back: f }))} />
+        <FilePicker label="Selfie" required camera="user" onPick={(f) => setFiles((s) => ({ ...s, selfie: f }))} />
       </div>
 
       <div className="flex justify-end pt-2">
@@ -310,15 +310,13 @@ function SubmitForm({
 function FilePicker({
   label,
   required,
-  capture,
   camera,
   onPick,
 }: {
   label: string;
   required?: boolean;
-  /** On mobile, open the camera directly: "user" = front (selfie), "environment" = rear. */
-  capture?: 'user' | 'environment';
-  /** When set, the tile opens the webcam (works on laptops too) instead of the file dialog. */
+  /** Optional secondary action — opens the webcam so the user can take a photo
+   *  instead of uploading. "user" = front (selfie), "environment" = rear. */
   camera?: 'user' | 'environment';
   onPick: (file: File) => void;
 }) {
@@ -336,15 +334,16 @@ function FilePicker({
     if (file) accept(file);
   };
 
+  const openUpload = () => ref.current?.click();
+
   return (
     <>
       <div
         role="button"
         tabIndex={0}
-        onClick={() => (camera ? setCamOpen(true) : ref.current?.click())}
+        onClick={openUpload}
         onKeyDown={(e) =>
-          (e.key === 'Enter' || e.key === ' ') &&
-          (e.preventDefault(), camera ? setCamOpen(true) : ref.current?.click())
+          (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openUpload())
         }
         className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-5 text-center text-xs transition ${
           name
@@ -352,31 +351,30 @@ function FilePicker({
             : 'border-white/15 bg-white/[0.02] text-slate-400 hover:border-brand-400/40 hover:text-brand-200'
         }`}
       >
-        {camera ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+        <Upload className="h-4 w-4" />
         <span className="font-medium">
           {label}
           {required && <span className="text-rose-400"> *</span>}
         </span>
         <span className="max-w-[10rem] truncate text-[11px] text-slate-500">
-          {name ?? (camera ? 'Take a photo' : 'PNG / JPG')}
+          {name ?? 'PNG / JPG'}
         </span>
         {camera && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              ref.current?.click();
+              setCamOpen(true);
             }}
-            className="text-[11px] text-brand-300 underline-offset-2 hover:underline"
+            className="inline-flex items-center gap-1 text-[11px] text-brand-300 underline-offset-2 hover:underline"
           >
-            or upload a file
+            <Camera className="h-3 w-3" /> or take a photo
           </button>
         )}
         <input
           ref={ref}
           type="file"
           accept="image/*"
-          capture={capture}
           onChange={handle}
           className="hidden"
         />
