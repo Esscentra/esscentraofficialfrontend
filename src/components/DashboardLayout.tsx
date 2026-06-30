@@ -14,6 +14,7 @@ import {
   ShieldHalf,
   Target,
   UserCircle,
+  UserCog,
   Users,
   X,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import { initials } from '@/lib/utils';
 
 const NAV = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
   { to: '/app/leads', label: 'Leads', icon: Users },
   { to: '/app/opportunities', label: 'Opportunities', icon: Target },
   { to: '/app/projects', label: 'Projects', icon: FolderKanban },
@@ -41,6 +43,10 @@ export function DashboardLayout() {
   const toast = useToast();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
+  // Only admins see admin-only links (e.g. Users management).
+  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
+  const navItems = NAV.filter((item) => !item.adminOnly || isAdmin);
 
   const onLogout = async () => {
     await logout();
@@ -70,7 +76,7 @@ export function DashboardLayout() {
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-          {NAV.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

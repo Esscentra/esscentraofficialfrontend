@@ -1,12 +1,17 @@
 /** Roles returned by the Esscentra backend. */
 export type AccountRole = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'USER' | 'CLIENT';
 
-/** Account lifecycle status. */
-export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
+/** Account lifecycle status (matches the backend User model enum). */
+export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 
 /* ----------------------------------- KYC ----------------------------------- */
 
-export type KycStatus = 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
+export type KycStatus =
+  | 'NOT_SUBMITTED'
+  | 'PENDING'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED';
 export type KycDocumentType = 'AADHAR' | 'PAN' | 'PASSPORT' | 'DRIVING_LICENSE';
 
 export interface KycRecord {

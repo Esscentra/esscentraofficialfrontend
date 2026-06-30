@@ -43,6 +43,12 @@ const STATUS_UI: Record<
   KycStatus,
   { label: string; icon: typeof Clock; classes: string; note: string }
 > = {
+  NOT_SUBMITTED: {
+    label: 'Not started',
+    icon: Clock,
+    classes: 'bg-white/10 text-slate-300 ring-white/15',
+    note: 'You haven’t submitted your documents yet.',
+  },
   PENDING: {
     label: 'Pending review',
     icon: Clock,

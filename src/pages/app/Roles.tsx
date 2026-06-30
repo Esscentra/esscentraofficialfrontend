@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Pencil, Plus, ShieldHalf, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -9,54 +9,80 @@ import { Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { RowButton } from '@/components/ui/RowButton';
+import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
+import { createRole, deleteRole, listRoles, updateRole } from '@/lib/adminApi';
+import { getErrorMessage } from '@/lib/utils';
 import type { Role } from '@/types';
-
-// Sample data so the table is populated in the UI.
-// TODO: remove this once GET /roles is wired — start from [] instead.
-const SAMPLE_ROLES: Role[] = [
-  { id: '1', name: 'SUPER_ADMIN', description: 'Full access to every part of the platform.' },
-  { id: '2', name: 'ADMIN', description: 'Manages users, roles and most settings.' },
-  { id: '3', name: 'MANAGER', description: 'Oversees leads, projects and team tasks.' },
-  { id: '4', name: 'ACCOUNTANT', description: 'Handles invoices, billing and finance.' },
-  { id: '5', name: 'USER', description: 'Standard member access.' },
-  { id: '6', name: 'CLIENT', description: 'External client with limited, scoped access.' },
-];
 
 export default function RolesPage() {
   const toast = useToast();
-  const [items, setItems] = useState<Role[]>(SAMPLE_ROLES);
+  const [items, setItems] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // TODO (load): GET /roles  (admin only)
-  //   useEffect(() => { api.get('/roles').then((r) => setItems(r.data.data)); }, []);
+  /* -------------------------------- Load roles ------------------------------- */
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    listRoles()
+      .then((roles) => {
+        if (active) setItems(roles);
+      })
+      .catch((e) => {
+        if (active) toast.error('Could not load roles', getErrorMessage(e, 'Admin access is required.'));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [toast]);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  /* ------------------------------ Create / update ---------------------------- */
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const data = {
-      // backend stores role names uppercase
-      name: String(f.get('name') ?? '').trim().toUpperCase(),
+    const input = {
+      name: String(f.get('name') ?? '').trim(),
       description: String(f.get('description') ?? ''),
     };
+    if (!input.name) return;
 
-    if (editing) {
-      // TODO (update): PUT /roles/:id → await api.put(`/roles/${editing.id}`, data)
-      setItems((prev) => prev.map((it) => (it.id === editing.id ? { ...it, ...data } : it)));
-      toast.success('Role updated');
-    } else {
-      // TODO (create): POST /roles → const { data: res } = await api.post('/roles', data)
-      setItems((prev) => [{ id: crypto.randomUUID(), ...data }, ...prev]);
-      toast.success('Role created');
+    setSaving(true);
+    try {
+      if (editing) {
+        const updated = await updateRole(editing.id, input);
+        setItems((prev) => prev.map((it) => (it.id === editing.id ? updated : it)));
+        toast.success('Role updated');
+      } else {
+        const created = await createRole(input);
+        setItems((prev) => [created, ...prev]);
+        toast.success('Role created');
+      }
+      setOpen(false);
+      setEditing(null);
+    } catch (e) {
+      toast.error(editing ? 'Update failed' : 'Create failed', getErrorMessage(e, 'Please try again.'));
+    } finally {
+      setSaving(false);
     }
-    setOpen(false);
   };
 
-  const remove = (id: string) => {
-    // TODO (delete): DELETE /roles/:id → await api.delete(`/roles/${id}`)
-    setItems((prev) => prev.filter((it) => it.id !== id));
-    toast.info('Role deleted');
+  /* --------------------------------- Delete --------------------------------- */
+  const remove = async (role: Role) => {
+    const prev = items;
+    setItems((p) => p.filter((it) => it.id !== role.id)); // optimistic
+    try {
+      await deleteRole(role.id);
+      toast.info('Role deleted', role.name);
+    } catch (e) {
+      setItems(prev); // rollback on failure
+      toast.error('Delete failed', getErrorMessage(e, 'Please try again.'));
+    }
   };
 
   const columns: Column<Role>[] = [
@@ -72,10 +98,10 @@ export default function RolesPage() {
       className: 'text-right',
       render: (r) => (
         <div className="flex justify-end gap-1">
-          <RowButton onClick={() => { setEditing(r); setOpen(true); }} aria-label="Edit">
+          <RowButton onClick={() => { setEditing(r); setOpen(true); }} aria-label="Edit" title="Edit">
             <Pencil className="h-4 w-4" />
           </RowButton>
-          <RowButton onClick={() => remove(r.id)} aria-label="Delete" danger>
+          <RowButton onClick={() => remove(r)} aria-label="Delete" title="Delete" danger>
             <Trash2 className="h-4 w-4" />
           </RowButton>
         </div>
@@ -95,11 +121,13 @@ export default function RolesPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {loading ? (
+        <LoadingCard label="Loading roles…" />
+      ) : items.length === 0 ? (
         <EmptyState
           icon={ShieldHalf}
           title="No roles yet"
-          description="Wire up GET /roles to load them (admin only). Create one to preview the UI."
+          description="Create a role to get started. Roles control what each user can access."
           action={
             <Button size="sm" onClick={() => { setEditing(null); setOpen(true); }}>
               <Plus className="h-4 w-4" /> New role
@@ -110,13 +138,18 @@ export default function RolesPage() {
         <DataTable columns={columns} rows={items} />
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Edit role' : 'New role'}>
+      <Modal
+        open={open}
+        onClose={() => { setOpen(false); setEditing(null); }}
+        title={editing ? 'Edit role' : 'New role'}
+      >
         <form onSubmit={onSubmit} className="space-y-4">
           <Input
             label="Name"
             name="name"
             defaultValue={editing?.name}
             placeholder="MANAGER"
+            hint="Stored in uppercase."
             required
           />
           <Textarea
@@ -126,10 +159,16 @@ export default function RolesPage() {
             placeholder="What can this role do?"
           />
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { setOpen(false); setEditing(null); }}
+            >
               Cancel
             </Button>
-            <Button type="submit">{editing ? 'Save changes' : 'Create role'}</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Saving…' : editing ? 'Save changes' : 'Create role'}
+            </Button>
           </div>
         </form>
       </Modal>

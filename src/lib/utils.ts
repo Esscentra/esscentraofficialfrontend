@@ -13,6 +13,11 @@ export function initials(name: string): string {
     .join('');
 }
 
+/** Pull a user-facing message off any thrown value (ApiError carries the backend message). */
+export function getErrorMessage(e: unknown, fallback = 'Something went wrong.'): string {
+  return e instanceof Error && e.message ? e.message : fallback;
+}
+
 /** Strength score 0–4 plus a label, used by the password meter. */
 export function passwordStrength(pw: string): { score: number; label: string } {
   let score = 0;

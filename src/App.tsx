@@ -20,6 +20,7 @@ import InquiriesPage from './pages/app/Inquiries';
 import BlogPage from './pages/app/Blog';
 import NewsletterPage from './pages/app/Newsletter';
 import RolesPage from './pages/app/Roles';
+import UsersPage from './pages/app/Users';
 
 export default function App() {
   const location = useLocation();
@@ -89,6 +90,7 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="users" element={<UsersPage />} />
           <Route path="leads" element={<LeadsPage />} />
           <Route path="opportunities" element={<OpportunitiesPage />} />
           <Route path="projects" element={<ProjectsPage />} />
