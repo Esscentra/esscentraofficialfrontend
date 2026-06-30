@@ -1,5 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { Account, Opportunity } from '@/types';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import type { Account, Opportunity } from "@/types";
 
 /**
  * In-memory CRM store shared across the dashboard (UI only — no API yet).
@@ -11,8 +18,8 @@ import type { Account, Opportunity } from '@/types';
  * code that reads `accounts` / `opportunities` won't need to change.
  */
 
-type NewAccount = Omit<Account, 'id' | 'createdAt'>;
-type NewOpportunity = Omit<Opportunity, 'id' | 'createdAt'>;
+type NewAccount = Omit<Account, "id" | "createdAt">;
+type NewOpportunity = Omit<Opportunity, "id" | "createdAt">;
 
 interface CrmContextValue {
   accounts: Account[];
@@ -36,14 +43,23 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
 
   const addAccount = useCallback((data: NewAccount) => {
-    const account: Account = { ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    const account: Account = {
+      ...data,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
     setAccounts((prev) => [account, ...prev]);
     return account;
   }, []);
 
-  const updateAccount = useCallback((id: string, patch: Partial<NewAccount>) => {
-    setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
-  }, []);
+  const updateAccount = useCallback(
+    (id: string, patch: Partial<NewAccount>) => {
+      setAccounts((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+      );
+    },
+    [],
+  );
 
   const removeAccount = useCallback((id: string) => {
     setAccounts((prev) => prev.filter((a) => a.id !== id));
@@ -52,14 +68,23 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addOpportunity = useCallback((data: NewOpportunity) => {
-    const opp: Opportunity = { ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    const opp: Opportunity = {
+      ...data,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
     setOpportunities((prev) => [opp, ...prev]);
     return opp;
   }, []);
 
-  const updateOpportunity = useCallback((id: string, patch: Partial<NewOpportunity>) => {
-    setOpportunities((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch } : o)));
-  }, []);
+  const updateOpportunity = useCallback(
+    (id: string, patch: Partial<NewOpportunity>) => {
+      setOpportunities((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, ...patch } : o)),
+      );
+    },
+    [],
+  );
 
   const removeOpportunity = useCallback((id: string) => {
     setOpportunities((prev) => prev.filter((o) => o.id !== id));
@@ -76,7 +101,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       addOpportunity,
       updateOpportunity,
       removeOpportunity,
-      accountName: (id?: string) => (id ? nameById.get(id) ?? '—' : '—'),
+      accountName: (id?: string) => (id ? (nameById.get(id) ?? "—") : "—"),
     };
   }, [
     accounts,
@@ -95,6 +120,6 @@ export function CrmProvider({ children }: { children: ReactNode }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useCrm() {
   const ctx = useContext(CrmContext);
-  if (!ctx) throw new Error('useCrm must be used within <CrmProvider>');
+  if (!ctx) throw new Error("useCrm must be used within <CrmProvider>");
   return ctx;
 }
