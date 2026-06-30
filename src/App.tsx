@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute, GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
@@ -88,8 +88,12 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="kyc-review" element={<KycReviewPage />} />
+
+        {/* Admin-only governance pages */}
+        <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+        <Route path="kyc-review" element={<AdminRoute><KycReviewPage /></AdminRoute>} />
+        <Route path="roles" element={<AdminRoute><RolesPage /></AdminRoute>} />
+
         <Route path="leads" element={<LeadsPage />} />
         <Route path="opportunities" element={<OpportunitiesPage />} />
         <Route path="accounts" element={<AccountsPage />} />
@@ -99,7 +103,6 @@ export default function App() {
         <Route path="inquiries" element={<InquiriesPage />} />
         <Route path="blog" element={<BlogPage />} />
         <Route path="newsletter" element={<NewsletterPage />} />
-        <Route path="roles" element={<RolesPage />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

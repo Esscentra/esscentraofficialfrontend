@@ -25,7 +25,7 @@ import { Logo } from './Logo';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './ui/Toast';
-import { initials } from '@/lib/utils';
+import { initials, isAdminRole } from '@/lib/utils';
 
 const NAV = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -40,7 +40,7 @@ const NAV = [
   { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare },
   { to: '/app/blog', label: 'Blog', icon: FileText },
   { to: '/app/newsletter', label: 'Newsletter', icon: Mail },
-  { to: '/app/roles', label: 'Roles', icon: ShieldHalf },
+  { to: '/app/roles', label: 'Roles', icon: ShieldHalf, adminOnly: true },
 ];
 
 export function DashboardLayout() {
@@ -49,8 +49,8 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  // Only admins see admin-only links (e.g. Users management).
-  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
+  // Only admins see admin-only links (Users, Roles, KYC Review).
+  const isAdmin = isAdminRole(user?.role);
   const navItems = NAV.filter((item) => !item.adminOnly || isAdmin);
 
   const onLogout = async () => {

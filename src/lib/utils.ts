@@ -3,6 +3,14 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
 }
 
+/** Roles with platform governance access (users, roles, KYC review). */
+export const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+
+/** True when the role can access admin-only areas. */
+export function isAdminRole(role?: string): boolean {
+  return !!role && ADMIN_ROLES.includes(role);
+}
+
 /** Deterministic gradient avatar from a string (used when no photo is set). */
 export function initials(name: string): string {
   return name
