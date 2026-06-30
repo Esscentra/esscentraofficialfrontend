@@ -25,7 +25,7 @@ import { Logo } from './Logo';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './ui/Toast';
-import { initials, isAdminRole } from '@/lib/utils';
+import { initials, isAdminRole, isSuperAdminRole } from '@/lib/utils';
 
 const NAV = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -40,7 +40,7 @@ const NAV = [
   { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare },
   { to: '/app/blog', label: 'Blog', icon: FileText },
   { to: '/app/newsletter', label: 'Newsletter', icon: Mail },
-  { to: '/app/roles', label: 'Roles', icon: ShieldHalf, adminOnly: true },
+  { to: '/app/roles', label: 'Roles', icon: ShieldHalf, superAdminOnly: true },
 ];
 
 export function DashboardLayout() {
@@ -49,9 +49,14 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  // Only admins see admin-only links (Users, Roles, KYC Review).
+  // Gate links by tier: Users/KYC Review = admin+, Roles = super admin only.
   const isAdmin = isAdminRole(user?.role);
-  const navItems = NAV.filter((item) => !item.adminOnly || isAdmin);
+  const isSuperAdmin = isSuperAdminRole(user?.role);
+  const navItems = NAV.filter((item) => {
+    if (item.superAdminOnly) return isSuperAdmin;
+    if (item.adminOnly) return isAdmin;
+    return true;
+  });
 
   const onLogout = async () => {
     await logout();

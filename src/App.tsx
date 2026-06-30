@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AdminRoute, GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute, GuestRoute, ProtectedRoute, SuperAdminRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
@@ -89,10 +89,11 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
 
-        {/* Admin-only governance pages */}
+        {/* Admin governance pages */}
         <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="kyc-review" element={<AdminRoute><KycReviewPage /></AdminRoute>} />
-        <Route path="roles" element={<AdminRoute><RolesPage /></AdminRoute>} />
+        {/* Super-admin only: managing role types */}
+        <Route path="roles" element={<SuperAdminRoute><RolesPage /></SuperAdminRoute>} />
 
         <Route path="leads" element={<LeadsPage />} />
         <Route path="opportunities" element={<OpportunitiesPage />} />

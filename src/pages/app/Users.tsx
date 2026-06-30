@@ -12,7 +12,7 @@ import { RowButton } from '@/components/ui/RowButton';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { getErrorMessage, initials } from '@/lib/utils';
+import { getErrorMessage, initials, isSuperAdminRole } from '@/lib/utils';
 import { listRoles, listUsers, updateUserRole } from '@/lib/adminApi';
 import type { Role, User } from '@/types';
 
@@ -50,6 +50,8 @@ function fmtDate(iso?: string) {
 export default function UsersPage() {
   const toast = useToast();
   const { user: me } = useAuth();
+  // Super admins may assign/modify the SUPER_ADMIN role; admins may not.
+  const iAmSuper = isSuperAdminRole(me?.role);
 
   const [items, setItems] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -202,13 +204,22 @@ export default function UsersPage() {
       key: 'actions',
       header: '',
       className: 'text-right',
-      render: (u) => (
-        <div className="flex justify-end gap-1">
-          <RowButton onClick={() => openEdit(u)} aria-label="Change role" title="Change role">
-            <UserCog className="h-4 w-4" />
-          </RowButton>
-        </div>
-      ),
+      render: (u) => {
+        // Only a super admin may modify a super-admin account.
+        const locked = isSuperAdminRole(u.role) && !iAmSuper;
+        return (
+          <div className="flex justify-end gap-1">
+            <RowButton
+              onClick={() => openEdit(u)}
+              aria-label="Change role"
+              title={locked ? 'Only a super admin can modify this account' : 'Change role'}
+              disabled={locked}
+            >
+              <UserCog className="h-4 w-4" />
+            </RowButton>
+          </div>
+        );
+      },
     },
   ];
 
@@ -288,7 +299,10 @@ export default function UsersPage() {
               onChange={(e) => setRoleId(e.target.value)}
               options={
                 roles.length
-                  ? roles.map((r) => ({ value: r.id, label: humanize(r.name) }))
+                  ? roles
+                      // Admins can't grant SUPER_ADMIN — only super admins can.
+                      .filter((r) => iAmSuper || !isSuperAdminRole(r.name))
+                      .map((r) => ({ value: r.id, label: humanize(r.name) }))
                   : [{ value: '', label: 'No roles available' }]
               }
               required
