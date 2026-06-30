@@ -99,169 +99,238 @@
 
 /* ========================================================================== */
 /*  THEMES                                                                     */
-/*  Dark is the default look (no overrides). The blocks below remap the dark   */
-/*  surfaces, text and accents for the LIGHT and READING (sepia) themes.       */
-/*  Selectors using [class*="…"] catch the white-alpha utility system          */
-/*  (bg-white/…, border-white/…, ring-white/…) used throughout the app.        */
+/*  Dark = default (no overrides). LIGHT and READING are full premium remaps:  */
+/*  layered backdrops, real shadow depth, strong text hierarchy, calibrated    */
+/*  accent contrast. [class*="…"] catches the white-alpha utility system.      */
 /* ========================================================================== */
 
-/* --------------------------------- LIGHT ---------------------------------- */
+/* ===========================  LIGHT  ====================================== */
 html[data-theme='light'] body {
-  @apply bg-[#eef2f8] text-slate-700;
+  background: #eef2fa;
+  color: #334155;
 }
 
-/* App backdrop + frosted bars */
-html[data-theme='light'] [class*='#070c1a'] {
-  background-color: rgba(255, 255, 255, 0.78) !important;
+/* Backdrop: hide the dark blobs, paint a soft, layered brand glow instead. */
+html[data-theme='light'] .aurora-bg [class*='animate-aurora'] {
+  opacity: 0;
 }
 html[data-theme='light'] .aurora-bg {
-  background-color: #eef2f8 !important;
+  background:
+    radial-gradient(55rem 38rem at 12% -12%, rgba(47, 109, 240, 0.12), transparent 60%),
+    radial-gradient(48rem 36rem at 102% 2%, rgba(99, 102, 241, 0.1), transparent 55%),
+    radial-gradient(60rem 46rem at 50% 118%, rgba(56, 189, 248, 0.1), transparent 60%),
+    linear-gradient(180deg, #eef3fb, #e7edf7) !important;
 }
-html[data-theme='light'] .aurora-bg [class*='animate-aurora'] {
-  opacity: 0.28;
+/* Faint grid becomes a subtle dark hairline texture. */
+html[data-theme='light'] .bg-grid-faint {
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px) !important;
 }
 
-/* Cards */
+/* Frosted bars (sidebar / topbar / sticky headers). */
+html[data-theme='light'] [class*='#070c1a'] {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* Cards — crisp white with layered, soft shadows for depth. */
 html[data-theme='light'] .glass-card {
-  border-color: #e3e9f3;
+  border-color: rgba(15, 23, 42, 0.07);
   background: #ffffff;
   box-shadow:
-    0 18px 50px -24px rgba(15, 23, 42, 0.25),
-    0 4px 16px -8px rgba(29, 87, 219, 0.12);
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 10px 24px -12px rgba(15, 23, 42, 0.14),
+    0 30px 60px -30px rgba(29, 87, 219, 0.22);
 }
 html[data-theme='light'] .glass-card::before {
-  background: linear-gradient(90deg, transparent, rgba(47, 109, 240, 0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(47, 109, 240, 0.55), transparent);
 }
 html[data-theme='light'] .glass-card::after {
-  background: radial-gradient(120% 80% at 50% -10%, rgba(47, 109, 240, 0.06), transparent 60%);
+  background: radial-gradient(120% 80% at 50% -10%, rgba(47, 109, 240, 0.05), transparent 60%);
 }
 
 /* Inputs */
 html[data-theme='light'] .glass-input {
-  border-color: #dbe2ee;
+  border-color: rgba(15, 23, 42, 0.12);
   background: #ffffff;
   color: #0f172a;
-  box-shadow: inset 0 1px 0 0 rgba(15, 23, 42, 0.02);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+html[data-theme='light'] .glass-input::placeholder {
+  color: #9aa6b8;
 }
 html[data-theme='light'] .glass-input:hover {
-  border-color: #c4d0e6;
+  border-color: rgba(15, 23, 42, 0.22);
+}
+html[data-theme='light'] .glass-input:focus {
+  border-color: rgba(47, 109, 240, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(47, 109, 240, 0.35),
+    0 8px 22px -10px rgba(29, 87, 219, 0.4);
 }
 
-/* Text scale */
-html[data-theme='light'] .text-white { color: #0f172a; }
-html[data-theme='light'] .text-slate-100 { color: #1e293b; }
-html[data-theme='light'] .text-slate-200 { color: #334155; }
-html[data-theme='light'] .text-slate-300 { color: #475569; }
-html[data-theme='light'] .text-slate-400 { color: #64748b; }
-html[data-theme='light'] .text-slate-500 { color: #94a3b8; }
+/* Text hierarchy — strong, readable contrast. */
+html[data-theme='light'] .text-white { color: #0b1220; }
+html[data-theme='light'] .text-slate-100 { color: #111827; }
+html[data-theme='light'] .text-slate-200 { color: #1f2937; }
+html[data-theme='light'] .text-slate-300 { color: #374151; }
+html[data-theme='light'] .text-slate-400 { color: #5b6677; }
+html[data-theme='light'] .text-slate-500 { color: #8b95a6; }
 
-/* White-alpha surfaces / borders / rings */
-html[data-theme='light'] [class*='bg-white/'] { background-color: rgba(15, 23, 42, 0.04); }
-html[data-theme='light'] [class*='hover:bg-white/']:hover { background-color: rgba(15, 23, 42, 0.07); }
-html[data-theme='light'] [class*='border-white/'] { border-color: rgba(15, 23, 42, 0.1); }
-html[data-theme='light'] [class*='ring-white/'] { --tw-ring-color: rgba(15, 23, 42, 0.12); }
+/* White-alpha surfaces / borders / rings → cool, subtle slate tints. */
+html[data-theme='light'] [class*='bg-white/'] { background-color: rgba(31, 41, 55, 0.035); }
+html[data-theme='light'] [class*='hover:bg-white/']:hover { background-color: rgba(31, 41, 55, 0.07); }
+html[data-theme='light'] [class*='border-white/'] { border-color: rgba(15, 23, 42, 0.09); }
+html[data-theme='light'] [class*='ring-white/'] { --tw-ring-color: rgba(15, 23, 42, 0.1); }
 
-/* Gradient text needs to be visible on a light background */
+/* Accent text → darkened so badges/links read on white. */
+html[data-theme='light'] [class*='text-emerald-3'] { color: #047857; }
+html[data-theme='light'] [class*='text-sky-3'] { color: #0369a1; }
+html[data-theme='light'] [class*='text-amber-3'] { color: #b45309; }
+html[data-theme='light'] [class*='text-rose-3'] { color: #be123c; }
+html[data-theme='light'] [class*='text-violet-3'] { color: #6d28d9; }
+html[data-theme='light'] [class*='text-brand-2'],
+html[data-theme='light'] [class*='text-brand-3'] { color: #1d57db; }
+
 html[data-theme='light'] .text-gradient {
-  background-image: linear-gradient(90deg, #1a45b8, #1d57db, #2f6df0);
+  background-image: linear-gradient(90deg, #16389b, #1d57db, #2f6df0);
 }
 
-/* -------------------------------- READING --------------------------------- */
-/* Warm sepia palette + a serif body for a calm, long-read feel. */
+html[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+}
+
+/* ===========================  READING  ==================================== */
+/* Warm, paper-like palette + serif body for a calm long-read feel. */
 html[data-theme='reading'] body {
-  background: #f4ecd9;
-  color: #5b4d39;
+  background: #f3ead6;
+  color: #5b4a33;
   font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Times New Roman', serif;
 }
 
-html[data-theme='reading'] [class*='#070c1a'] {
-  background-color: rgba(244, 236, 217, 0.82) !important;
+html[data-theme='reading'] .aurora-bg [class*='animate-aurora'] {
+  opacity: 0;
 }
 html[data-theme='reading'] .aurora-bg {
-  background-color: #f4ecd9 !important;
+  background:
+    radial-gradient(55rem 38rem at 12% -12%, rgba(193, 142, 73, 0.16), transparent 60%),
+    radial-gradient(48rem 36rem at 102% 2%, rgba(212, 175, 110, 0.14), transparent 55%),
+    radial-gradient(60rem 46rem at 50% 118%, rgba(176, 137, 84, 0.12), transparent 60%),
+    linear-gradient(180deg, #f5ecd9, #efe3cb) !important;
 }
-html[data-theme='reading'] .aurora-bg [class*='animate-aurora'] {
-  opacity: 0.18;
+html[data-theme='reading'] .bg-grid-faint {
+  background-image:
+    linear-gradient(to right, rgba(91, 70, 40, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(91, 70, 40, 0.04) 1px, transparent 1px) !important;
+}
+
+html[data-theme='reading'] [class*='#070c1a'] {
+  background-color: rgba(248, 241, 226, 0.78) !important;
 }
 
 html[data-theme='reading'] .glass-card {
-  border-color: #e7d9bb;
-  background: #fbf5e8;
-  box-shadow: 0 16px 44px -24px rgba(91, 70, 54, 0.3);
+  border-color: rgba(120, 92, 52, 0.16);
+  background: #fcf6e9;
+  box-shadow:
+    0 1px 2px rgba(90, 70, 40, 0.05),
+    0 10px 26px -14px rgba(90, 70, 40, 0.2),
+    0 30px 60px -34px rgba(150, 110, 60, 0.22);
 }
 html[data-theme='reading'] .glass-card::before {
-  background: linear-gradient(90deg, transparent, rgba(180, 130, 70, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(180, 130, 70, 0.5), transparent);
 }
 html[data-theme='reading'] .glass-card::after {
-  background: radial-gradient(120% 80% at 50% -10%, rgba(180, 130, 70, 0.07), transparent 60%);
+  background: radial-gradient(120% 80% at 50% -10%, rgba(180, 130, 70, 0.06), transparent 60%);
 }
 
 html[data-theme='reading'] .glass-input {
-  border-color: #e3d6ba;
-  background: #fbf5e8;
-  color: #3b3227;
+  border-color: rgba(120, 92, 52, 0.22);
+  background: #fcf6e9;
+  color: #3b2f1e;
+  box-shadow: inset 0 1px 2px rgba(90, 70, 40, 0.05);
+}
+html[data-theme='reading'] .glass-input::placeholder {
+  color: #a8967a;
 }
 html[data-theme='reading'] .glass-input:hover {
-  border-color: #d6c49f;
+  border-color: rgba(120, 92, 52, 0.34);
+}
+html[data-theme='reading'] .glass-input:focus {
+  border-color: rgba(176, 127, 56, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(176, 127, 56, 0.35),
+    0 8px 22px -10px rgba(150, 110, 60, 0.4);
 }
 
-html[data-theme='reading'] .text-white { color: #3b3227; }
-html[data-theme='reading'] .text-slate-100 { color: #4a3f30; }
-html[data-theme='reading'] .text-slate-200 { color: #574a39; }
-html[data-theme='reading'] .text-slate-300 { color: #6b5d49; }
-html[data-theme='reading'] .text-slate-400 { color: #837154; }
-html[data-theme='reading'] .text-slate-500 { color: #9c8a6b; }
+html[data-theme='reading'] .text-white { color: #2c2114; }
+html[data-theme='reading'] .text-slate-100 { color: #3a2c1b; }
+html[data-theme='reading'] .text-slate-200 { color: #4a3a26; }
+html[data-theme='reading'] .text-slate-300 { color: #5c4a32; }
+html[data-theme='reading'] .text-slate-400 { color: #7a6647; }
+html[data-theme='reading'] .text-slate-500 { color: #9a8763; }
 
-html[data-theme='reading'] [class*='bg-white/'] { background-color: rgba(91, 70, 54, 0.05); }
-html[data-theme='reading'] [class*='hover:bg-white/']:hover { background-color: rgba(91, 70, 54, 0.09); }
-html[data-theme='reading'] [class*='border-white/'] { border-color: rgba(91, 70, 54, 0.15); }
-html[data-theme='reading'] [class*='ring-white/'] { --tw-ring-color: rgba(91, 70, 54, 0.18); }
+html[data-theme='reading'] [class*='bg-white/'] { background-color: rgba(91, 70, 40, 0.045); }
+html[data-theme='reading'] [class*='hover:bg-white/']:hover { background-color: rgba(91, 70, 40, 0.09); }
+html[data-theme='reading'] [class*='border-white/'] { border-color: rgba(120, 92, 52, 0.16); }
+html[data-theme='reading'] [class*='ring-white/'] { --tw-ring-color: rgba(120, 92, 52, 0.18); }
+
+html[data-theme='reading'] [class*='text-emerald-3'] { color: #2f7d52; }
+html[data-theme='reading'] [class*='text-sky-3'] { color: #1f6f99; }
+html[data-theme='reading'] [class*='text-amber-3'] { color: #a8651a; }
+html[data-theme='reading'] [class*='text-rose-3'] { color: #b03a4a; }
+html[data-theme='reading'] [class*='text-violet-3'] { color: #6d4aa8; }
+html[data-theme='reading'] [class*='text-brand-2'],
+html[data-theme='reading'] [class*='text-brand-3'] { color: #1d57db; }
 
 html[data-theme='reading'] .text-gradient {
   background-image: linear-gradient(90deg, #7a4d18, #9a6620, #b67f28);
 }
 
-/* Keep the display headings in Sora even in reading mode (only body is serif) */
+html[data-theme='reading'] ::-webkit-scrollbar-thumb {
+  background: rgba(120, 92, 52, 0.25);
+}
+
+/* Keep display headings in Sora even in reading mode (only body is serif). */
 html[data-theme='reading'] .font-display {
   font-family: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-/* ------------------- Brand panel stays dark in every theme ----------------- */
-/* The login hero is a dark gradient with light text. Light/Reading themes      */
-/* would otherwise flip its text dark and wash out the gradient, so we pin it.   */
+/* ----------- Brand hero panel stays dark & vivid in every theme ----------- */
 html[data-theme='light'] .brand-panel,
 html[data-theme='reading'] .brand-panel {
   background-color: #0a1226 !important;
+  background-image: linear-gradient(135deg, rgba(29, 87, 219, 0.55), rgba(27, 60, 147, 0.45), #070c1a) !important;
 }
 html[data-theme='light'] .brand-panel .text-white,
 html[data-theme='reading'] .brand-panel .text-white {
   color: #ffffff;
 }
-html[data-theme='light'] .brand-panel .text-slate-200,
-html[data-theme='reading'] .brand-panel .text-slate-200 {
+html[data-theme='light'] .brand-panel [class*='text-slate-200'],
+html[data-theme='reading'] .brand-panel [class*='text-slate-200'] {
   color: rgba(255, 255, 255, 0.85);
 }
-html[data-theme='light'] .brand-panel .text-slate-300,
-html[data-theme='reading'] .brand-panel .text-slate-300,
 html[data-theme='light'] .brand-panel [class*='text-slate-300'],
 html[data-theme='reading'] .brand-panel [class*='text-slate-300'] {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.78);
 }
-html[data-theme='light'] .brand-panel .text-slate-400,
-html[data-theme='reading'] .brand-panel .text-slate-400,
 html[data-theme='light'] .brand-panel [class*='text-slate-400'],
 html[data-theme='reading'] .brand-panel [class*='text-slate-400'] {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.58);
+}
+html[data-theme='light'] .brand-panel [class*='text-brand-2'],
+html[data-theme='reading'] .brand-panel [class*='text-brand-2'],
+html[data-theme='light'] .brand-panel [class*='text-brand-3'],
+html[data-theme='reading'] .brand-panel [class*='text-brand-3'] {
+  color: #bcd5ff;
 }
 html[data-theme='light'] .brand-panel [class*='bg-white/'],
 html[data-theme='reading'] .brand-panel [class*='bg-white/'] {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 html[data-theme='light'] .brand-panel [class*='border-white/'],
 html[data-theme='reading'] .brand-panel [class*='border-white/'] {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.14);
 }
-/* The gradient "agency" word: keep its bright on-dark gradient. */
 html[data-theme='light'] .brand-panel .text-gradient,
 html[data-theme='reading'] .brand-panel .text-gradient {
   background-image: linear-gradient(90deg, #ffffff, #d9e7ff, #8fbaff);
