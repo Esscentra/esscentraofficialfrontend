@@ -1,8 +1,19 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Building, Globe, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  Building,
+  Building2,
+  CheckCircle2,
+  Globe,
+  PauseCircle,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { StatCard } from '@/components/ui/StatCard';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select, Textarea } from '@/components/ui/Field';
@@ -56,6 +67,15 @@ export default function AccountsPage() {
         (a.city ?? '').toLowerCase().includes(q),
     );
   }, [accounts, query]);
+
+  const stats = useMemo(
+    () => ({
+      total: accounts.length,
+      active: accounts.filter((a) => a.status === 'ACTIVE').length,
+      inactive: accounts.filter((a) => a.status === 'INACTIVE').length,
+    }),
+    [accounts],
+  );
 
   const openNew = () => { setEditing(null); setOpen(true); };
   const close = () => { setOpen(false); setEditing(null); };
@@ -150,6 +170,7 @@ export default function AccountsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="CRM · Step 1"
         title="Accounts"
         subtitle="The companies you work with — the parent of contacts and opportunities."
         action={
@@ -158,6 +179,14 @@ export default function AccountsPage() {
           </Button>
         }
       />
+
+      {accounts.length > 0 && (
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard icon={Building2} label="Total accounts" value={stats.total} tone="brand" />
+          <StatCard icon={CheckCircle2} label="Active" value={stats.active} tone="green" />
+          <StatCard icon={PauseCircle} label="Inactive" value={stats.inactive} tone="amber" />
+        </div>
+      )}
 
       {accounts.length > 0 && (
         <div className="mb-4 sm:max-w-sm">

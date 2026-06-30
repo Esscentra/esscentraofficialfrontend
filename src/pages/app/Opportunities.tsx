@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
-import { Building, Pencil, Plus, Target, Trash2 } from 'lucide-react';
+import { useMemo, useState, type FormEvent } from 'react';
+import { Building, Layers, Pencil, Plus, Target, Trophy, Trash2, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataTable, type Column } from '@/components/ui/DataTable';
+import { StatCard } from '@/components/ui/StatCard';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select, Textarea } from '@/components/ui/Field';
@@ -34,12 +35,69 @@ const TONE: Record<OpportunityStage, Tone> = {
   LOST: 'red',
 };
 
+const BAR: Record<OpportunityStage, string> = {
+  NEW: 'bg-brand-500',
+  QUALIFIED: 'bg-sky-500',
+  PROPOSAL: 'bg-violet-500',
+  NEGOTIATION: 'bg-amber-500',
+  WON: 'bg-emerald-500',
+  LOST: 'bg-rose-500',
+};
+const OPEN_STAGES: OpportunityStage[] = ['NEW', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION'];
+
 const money = (n: number) =>
   new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(n || 0);
+
+const compactMoney = (n: number) =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(n || 0);
+
+/** Slim stacked bar that shows how deals are distributed across stages. */
+function PipelineBar({ items }: { items: Opportunity[] }) {
+  const total = items.length;
+  const counts = STAGES.map((stage) => ({
+    stage,
+    n: items.filter((o) => o.stage === stage).length,
+  }));
+
+  return (
+    <div className="glass-card p-5 sm:p-6">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="font-display text-sm font-semibold text-white">Pipeline by stage</p>
+        <span className="text-xs text-slate-400">{total} deals</span>
+      </div>
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/5">
+        {counts
+          .filter((c) => c.n > 0)
+          .map((c) => (
+            <div
+              key={c.stage}
+              className={`${BAR[c.stage]} transition-all`}
+              style={{ width: `${(c.n / total) * 100}%` }}
+              title={`${humanize(c.stage)}: ${c.n}`}
+            />
+          ))}
+      </div>
+      <div className="mt-3.5 flex flex-wrap gap-x-5 gap-y-2">
+        {counts.map((c) => (
+          <span key={c.stage} className="inline-flex items-center gap-1.5 text-xs text-slate-400">
+            <span className={`h-2 w-2 rounded-full ${BAR[c.stage]}`} />
+            {humanize(c.stage)}
+            <span className="font-semibold text-slate-200 tabular-nums">{c.n}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function OpportunitiesPage() {
   const toast = useToast();
@@ -50,6 +108,19 @@ export default function OpportunitiesPage() {
   const [editing, setEditing] = useState<Opportunity | null>(null);
 
   const hasAccounts = accounts.length > 0;
+
+  const stats = useMemo(() => {
+    const open = opportunities.filter((o) => OPEN_STAGES.includes(o.stage));
+    const won = opportunities.filter((o) => o.stage === 'WON');
+    const lost = opportunities.filter((o) => o.stage === 'LOST');
+    const decided = won.length + lost.length;
+    return {
+      pipelineValue: open.reduce((s, o) => s + (o.amount || 0), 0),
+      openCount: open.length,
+      wonValue: won.reduce((s, o) => s + (o.amount || 0), 0),
+      winRate: decided ? Math.round((won.length / decided) * 100) : 0,
+    };
+  }, [opportunities]);
 
   const openNew = () => { setEditing(null); setOpen(true); };
   const close = () => { setOpen(false); setEditing(null); };
@@ -130,6 +201,7 @@ export default function OpportunitiesPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="CRM · Step 2"
         title="Opportunities"
         subtitle="Deals in your pipeline. Each one belongs to an account."
         action={
@@ -138,6 +210,20 @@ export default function OpportunitiesPage() {
           </Button>
         }
       />
+
+      {hasAccounts && opportunities.length > 0 && (
+        <>
+          <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard icon={Wallet} label="Pipeline value" value={compactMoney(stats.pipelineValue)} tone="brand" />
+            <StatCard icon={Layers} label="Open deals" value={stats.openCount} tone="sky" />
+            <StatCard icon={Trophy} label="Won value" value={compactMoney(stats.wonValue)} tone="green" />
+            <StatCard icon={Target} label="Win rate" value={`${stats.winRate}%`} tone="violet" />
+          </div>
+          <div className="mb-6">
+            <PipelineBar items={opportunities} />
+          </div>
+        </>
+      )}
 
       {!hasAccounts ? (
         // Enforce the flow: no account → no opportunity.
