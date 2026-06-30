@@ -29,6 +29,22 @@ export interface KycRecord {
   createdAt?: string;
 }
 
+/** Minimal account info populated on an admin KYC submission. */
+export interface KycSubmitter {
+  id: string;
+  name: string;
+  email: string;
+}
+
+/**
+ * A KYC record as seen by an admin reviewer (GET /kyc).
+ * Adds the submitting user and who verified it on top of KycRecord.
+ */
+export interface KycSubmission extends KycRecord {
+  user?: KycSubmitter;
+  verifiedByName?: string;
+}
+
 /**
  * Account object returned by `POST /auth/register`.
  * Mirrors the backend response exactly.

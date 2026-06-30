@@ -1,6 +1,6 @@
 import api from './api';
 import { ApiError } from './api';
-import type { ApiResponse, KycDocumentType, KycRecord } from '@/types';
+import type { ApiResponse, KycDocumentType, KycRecord, KycSubmission } from '@/types';
 
 /** Raw KYC document as returned by Mongo (uses _id). */
 interface RawKyc {
@@ -78,4 +78,73 @@ export async function submitKyc(input: SubmitKycInput): Promise<KycRecord> {
   });
 
   return mapKyc(data.data);
+}
+
+/* ----------------------------- Admin: review KYC ---------------------------- */
+
+/** Populated user/admin ref on an admin KYC record. */
+interface RawRef {
+  _id?: string;
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+/** Admin KYC record: RawKyc plus the populated `userId` and `verifiedBy`. */
+interface RawKycAdmin extends RawKyc {
+  userId?: RawRef | string;
+  verifiedBy?: RawRef | string;
+}
+
+function refName(ref?: RawRef): string {
+  return [ref?.firstName, ref?.lastName].filter(Boolean).join(' ').trim() || ref?.email || '';
+}
+
+function mapSubmission(raw: RawKycAdmin): KycSubmission {
+  const userRef = typeof raw.userId === 'object' ? raw.userId : undefined;
+  const verifier = typeof raw.verifiedBy === 'object' ? raw.verifiedBy : undefined;
+  return {
+    ...mapKyc(raw),
+    user: userRef
+      ? {
+          id: userRef.id ?? userRef._id ?? '',
+          name: refName(userRef),
+          email: userRef.email ?? '',
+        }
+      : undefined,
+    verifiedByName: verifier ? refName(verifier) : undefined,
+  };
+}
+
+/**
+ * GET /kyc  (admin only) — every user's KYC submission, newest first.
+ */
+export async function listAllKyc(): Promise<KycSubmission[]> {
+  const { data } = await api.get<ApiResponse<RawKycAdmin[]>>('/kyc');
+  return (data.data ?? []).map(mapSubmission);
+}
+
+/**
+ * GET /kyc/pending  (admin only) — only PENDING / UNDER_REVIEW submissions.
+ */
+export async function listPendingKyc(): Promise<KycSubmission[]> {
+  const { data } = await api.get<ApiResponse<RawKycAdmin[]>>('/kyc/pending');
+  return (data.data ?? []).map(mapSubmission);
+}
+
+/**
+ * PATCH /kyc/:id/approve  (admin only)
+ */
+export async function approveKyc(kycId: string): Promise<KycSubmission> {
+  const { data } = await api.patch<ApiResponse<RawKycAdmin>>(`/kyc/${kycId}/approve`, {});
+  return mapSubmission(data.data);
+}
+
+/**
+ * PATCH /kyc/:id/reject  (admin only) — body { reason }.
+ */
+export async function rejectKyc(kycId: string, reason: string): Promise<KycSubmission> {
+  const { data } = await api.patch<ApiResponse<RawKycAdmin>>(`/kyc/${kycId}/reject`, { reason });
+  return mapSubmission(data.data);
 }

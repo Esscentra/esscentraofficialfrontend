@@ -18,6 +18,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { BadgeCheck } from 'lucide-react';
 import { AuroraBackground } from './AuroraBackground';
 import { Logo } from './Logo';
 import { useAuth } from '@/context/AuthContext';
@@ -27,6 +28,7 @@ import { initials } from '@/lib/utils';
 const NAV = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
+  { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
   { to: '/app/leads', label: 'Leads', icon: Users },
   { to: '/app/opportunities', label: 'Opportunities', icon: Target },
   { to: '/app/projects', label: 'Projects', icon: FolderKanban },
