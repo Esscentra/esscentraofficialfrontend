@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Sparkles, Workflow, Users } from 'lucide-react';
 import { Logo } from './Logo';
 import { AuroraBackground } from './AuroraBackground';
+import { ThemeSwitcher } from './ui/ThemeSwitcher';
 
 const HIGHLIGHTS = [
   { icon: Workflow, title: 'One platform, every phase', text: 'CRM, projects, billing and KYC — built on a single secure foundation.' },
@@ -89,6 +90,10 @@ export function AuthLayout({ title, subtitle, children, footer }: AuthLayoutProp
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4 sm:p-6">
       <AuroraBackground />
+
+      <div className="fixed right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <ThemeSwitcher />
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.98 }}

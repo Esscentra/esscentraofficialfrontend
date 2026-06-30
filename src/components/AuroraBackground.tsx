@@ -4,7 +4,7 @@
  */
 export function AuroraBackground() {
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#070c1a]">
+    <div className="aurora-bg pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#070c1a]">
       {/* color blobs */}
       <div className="absolute -left-32 -top-32 h-[42rem] w-[42rem] rounded-full bg-brand-600/30 blur-[120px] animate-aurora-1" />
       <div className="absolute -right-40 top-10 h-[38rem] w-[38rem] rounded-full bg-sky-500/20 blur-[130px] animate-aurora-2" />

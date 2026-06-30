@@ -22,6 +22,7 @@ import {
 import { BadgeCheck } from 'lucide-react';
 import { AuroraBackground } from './AuroraBackground';
 import { Logo } from './Logo';
+import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './ui/Toast';
 import { initials } from '@/lib/utils';
@@ -135,6 +136,7 @@ export function DashboardLayout() {
           </button>
 
           <div className="ml-auto flex items-center gap-3">
+            <ThemeSwitcher />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-white">{user?.name}</p>
               <p className="text-xs text-slate-400">{user?.email}</p>
