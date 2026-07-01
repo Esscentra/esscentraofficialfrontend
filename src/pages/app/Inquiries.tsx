@@ -87,7 +87,7 @@ export default function InquiriesPage() {
     if (inq.status !== 'ASSIGNED') return;
     setBusy(true);
     try {
-      const { account } = await convertInquiryToLead(inq.id);
+      await convertInquiryToLead(inq.id);
       // Conversion also completes the inquiry on the backend.
       const done = (it: ContactInquiry) => ({
         ...it,
@@ -96,12 +96,7 @@ export default function InquiriesPage() {
       });
       setItems((prev) => prev.map((it) => (it.id === inq.id ? done(it) : it)));
       setActive((prev) => (prev && prev.id === inq.id ? done(prev) : prev));
-      toast.success(
-        'Converted to lead',
-        account
-          ? `${inq.name} is now a lead under ${account.companyName}.`
-          : `${inq.name} is now in the leads pipeline.`,
-      );
+      toast.success('Converted to lead', `${inq.name} is now in the leads pipeline.`);
       setOpen(false);
     } catch (err) {
       toast.error('Convert failed', getErrorMessage(err));

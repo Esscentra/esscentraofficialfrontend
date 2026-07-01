@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Building2, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataTable, type Column } from '@/components/ui/DataTable';
@@ -9,7 +9,16 @@ import { Select, Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, humanize, type Tone } from '@/components/ui/StatusBadge';
 import { RowButton } from '@/components/ui/RowButton';
+import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
+import { getErrorMessage } from '@/lib/utils';
+import {
+  listLeads,
+  createLead,
+  updateLead,
+  deleteLead as apiDeleteLead,
+  convertLeadToAccount,
+} from '@/lib/leadApi';
 import type { Lead, LeadStatus } from '@/types';
 
 const STATUSES: LeadStatus[] = ['NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED', 'LOST'];
@@ -24,11 +33,26 @@ const TONE: Record<LeadStatus, Tone> = {
 export default function LeadsPage() {
   const toast = useToast();
   const [items, setItems] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Lead | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  // TODO (load): GET /leads
-  //   useEffect(() => { api.get('/leads').then((r) => setItems(r.data.data)); }, []);
+  /* ------------------------------- Load data ------------------------------- */
+  useEffect(() => {
+    let on = true;
+    setLoading(true);
+    listLeads()
+      .then((data) => on && setItems(data))
+      .catch(
+        (e) =>
+          on && toast.error('Could not load leads', getErrorMessage(e, 'Admin access required.')),
+      )
+      .finally(() => on && setLoading(false));
+    return () => {
+      on = false;
+    };
+  }, [toast]);
 
   const openCreate = () => {
     setEditing(null);
@@ -39,7 +63,8 @@ export default function LeadsPage() {
     setOpen(true);
   };
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  /* ------------------------------ Create / edit ---------------------------- */
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const data = {
@@ -53,22 +78,51 @@ export default function LeadsPage() {
       notes: String(f.get('notes') ?? ''),
     };
 
-    if (editing) {
-      // TODO (update): PATCH /leads/:id → await api.patch(`/leads/${editing.id}`, data)
-      setItems((prev) => prev.map((it) => (it.id === editing.id ? { ...it, ...data } : it)));
-      toast.success('Lead updated');
-    } else {
-      // TODO (create): POST /leads → const { data: res } = await api.post('/leads', data)
-      setItems((prev) => [{ id: crypto.randomUUID(), ...data }, ...prev]);
-      toast.success('Lead created');
+    setBusy(true);
+    try {
+      if (editing) {
+        const updated = await updateLead(editing.id, data);
+        setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
+        toast.success('Lead updated');
+      } else {
+        const created = await createLead(data);
+        setItems((prev) => [created, ...prev]);
+        toast.success('Lead created');
+      }
+      setOpen(false);
+    } catch (err) {
+      toast.error('Save failed', getErrorMessage(err));
+    } finally {
+      setBusy(false);
     }
-    setOpen(false);
   };
 
-  const remove = (id: string) => {
-    // TODO (delete): DELETE /leads/:id → await api.delete(`/leads/${id}`)
-    setItems((prev) => prev.filter((it) => it.id !== id));
-    toast.info('Lead deleted');
+  /* -------------------------------- Convert -------------------------------- */
+  const convert = async (lead: Lead) => {
+    if (lead.status === 'CONVERTED') return;
+    setBusy(true);
+    try {
+      const { lead: updated, account } = await convertLeadToAccount(lead.id);
+      setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
+      toast.success('Converted to account', `${account.companyName} is now a CRM account.`);
+    } catch (err) {
+      toast.error('Convert failed', getErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* -------------------------------- Delete --------------------------------- */
+  const remove = async (id: string) => {
+    const prev = items;
+    setItems((p) => p.filter((it) => it.id !== id)); // optimistic
+    try {
+      await apiDeleteLead(id);
+      toast.info('Lead deleted');
+    } catch (err) {
+      setItems(prev); // rollback
+      toast.error('Delete failed', getErrorMessage(err));
+    }
   };
 
   const columns: Column<Lead>[] = [
@@ -93,6 +147,19 @@ export default function LeadsPage() {
       className: 'text-right',
       render: (l) => (
         <div className="flex justify-end gap-1">
+          {l.status === 'CONVERTED' ? (
+            <StatusBadge tone="green">Account</StatusBadge>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy || !l.company}
+              title={l.company ? 'Convert to account' : 'Add a company first'}
+              onClick={() => convert(l)}
+            >
+              <Building2 className="h-4 w-4" /> Convert
+            </Button>
+          )}
           <RowButton onClick={() => openEdit(l)} aria-label="Edit">
             <Pencil className="h-4 w-4" />
           </RowButton>
@@ -108,7 +175,7 @@ export default function LeadsPage() {
     <div>
       <PageHeader
         title="Leads"
-        subtitle="Capture and qualify your prospects."
+        subtitle="Capture and qualify your prospects, then convert them into accounts."
         action={
           <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" /> New lead
@@ -116,11 +183,13 @@ export default function LeadsPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {loading ? (
+        <LoadingCard />
+      ) : items.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No leads yet"
-          description="Once you wire up GET /leads, your leads will appear here. For now, create one to preview the UI."
+          description="Leads promoted from inquiries appear here. Convert a qualified lead to create its account."
           action={
             <Button size="sm" onClick={openCreate}>
               <Plus className="h-4 w-4" /> New lead
@@ -156,7 +225,9 @@ export default function LeadsPage() {
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">{editing ? 'Save changes' : 'Create lead'}</Button>
+            <Button type="submit" disabled={busy}>
+              {editing ? 'Save changes' : 'Create lead'}
+            </Button>
           </div>
         </form>
       </Modal>
