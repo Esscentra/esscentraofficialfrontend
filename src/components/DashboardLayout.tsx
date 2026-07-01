@@ -6,7 +6,6 @@ import {
   Building2,
   FileText,
   FolderKanban,
-  LayoutDashboard,
   ListChecks,
   LogOut,
   Mail,
@@ -16,7 +15,6 @@ import {
   PanelLeftOpen,
   ShieldCheck,
   ShieldHalf,
-  Target,
   UserCircle,
   UserCog,
   Users,
@@ -30,11 +28,9 @@ import { useToast } from './ui/Toast';
 import { cn, initials, isAdminRole, isSuperAdminRole } from '@/lib/utils';
 
 const NAV = [
-  { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
   { to: '/app/leads', label: 'Leads', icon: Users },
-  { to: '/app/opportunities', label: 'Opportunities', icon: Target },
   { to: '/app/accounts', label: 'Accounts', icon: Building },
   { to: '/app/projects', label: 'Projects', icon: FolderKanban },
   { to: '/app/tasks', label: 'Tasks', icon: ListChecks },
@@ -128,7 +124,6 @@ export function DashboardLayout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.end}
               onClick={() => setOpen(false)}
               title={collapsed ? item.label : undefined}
               className={({ isActive }) => linkClass(isActive)}

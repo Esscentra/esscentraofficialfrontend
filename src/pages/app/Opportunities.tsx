@@ -1,6 +1,6 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Building, Layers, Pencil, Plus, Target, Trophy, Trash2, Wallet } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataTable, type Column } from '@/components/ui/DataTable';
@@ -107,7 +107,30 @@ export default function OpportunitiesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Opportunity | null>(null);
 
-  const hasAccounts = accounts.length > 0;
+  // Coming from Accounts → "Add opportunity": an account is preselected and the
+  // create modal opens automatically.
+  const location = useLocation();
+  const pre = (location.state ?? null) as { accountId?: string; companyName?: string } | null;
+
+  useEffect(() => {
+    if (pre?.accountId) {
+      setEditing(null);
+      setOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pre?.accountId]);
+
+  // Merge the preselected account into the options so it's always selectable,
+  // even if it isn't in the local store yet.
+  const accountOptions = useMemo(() => {
+    const opts = accounts.map((a) => ({ value: a.id, label: a.companyName }));
+    if (pre?.accountId && !opts.some((o) => o.value === pre.accountId)) {
+      opts.unshift({ value: pre.accountId, label: pre.companyName ?? 'Selected account' });
+    }
+    return opts;
+  }, [accounts, pre]);
+
+  const hasAccounts = accountOptions.length > 0;
 
   const stats = useMemo(() => {
     const open = opportunities.filter((o) => OPEN_STAGES.includes(o.stage));
@@ -260,8 +283,8 @@ export default function OpportunitiesPage() {
           <Select
             label="Account"
             name="accountId"
-            defaultValue={editing?.accountId ?? accounts[0]?.id ?? ''}
-            options={accounts.map((a) => ({ value: a.id, label: a.companyName }))}
+            defaultValue={editing?.accountId ?? pre?.accountId ?? accounts[0]?.id ?? ''}
+            options={accountOptions}
             required
           />
 

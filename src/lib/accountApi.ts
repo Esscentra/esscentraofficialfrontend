@@ -44,13 +44,32 @@ function mapAccount(raw: RawAccount): Account {
   };
 }
 
-/**
- * GET /accounts  (admin) — all CRM accounts, newest first.
- *
- * Accounts are read-only from the client: they are created only by converting
- * a Lead (POST /leads/:id/convert-to-account). There is no create/update/delete.
- */
+/** GET /accounts  (admin) — all CRM accounts, newest first. */
 export async function listAccounts(): Promise<Account[]> {
   const { data } = await api.get<ApiResponse<RawAccount[]>>('/accounts');
   return (data.data ?? []).map(mapAccount);
+}
+
+export interface AccountInput {
+  companyName: string;
+  website?: string;
+  industry?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  notes?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+/**
+ * POST /accounts  (admin) — manually create an account. Accounts are also
+ * created automatically when a lead is converted (convert-to-account); update
+ * and delete are not exposed.
+ */
+export async function createAccount(input: AccountInput): Promise<Account> {
+  const { data } = await api.post<ApiResponse<RawAccount>>('/accounts', input);
+  return mapAccount(data.data);
 }
