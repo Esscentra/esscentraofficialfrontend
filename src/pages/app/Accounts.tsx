@@ -1,36 +1,28 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Building,
   Building2,
   CheckCircle2,
   Globe,
   PauseCircle,
-  Pencil,
-  Plus,
   Search,
-  Trash2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { StatCard } from '@/components/ui/StatCard';
-import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { Select, Textarea } from '@/components/ui/Field';
-import { Button } from '@/components/ui/Button';
 import { StatusBadge, humanize, type Tone } from '@/components/ui/StatusBadge';
-import { RowButton } from '@/components/ui/RowButton';
+import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
-import { useCrm } from '@/context/CrmStore';
+import { getErrorMessage } from '@/lib/utils';
+import { listAccounts } from '@/lib/accountApi';
 import type { Account } from '@/types';
 
 /* -------------------------------------------------------------------------- */
-/*  Step 1 of the CRM flow: create the COMPANY (account). Contacts and         */
-/*  opportunities attach to it. UI only — wire later:                          */
-/*    load   → GET    /accounts                                                */
-/*    create → POST   /accounts   (ownerId is set by the backend)             */
-/*    update → PATCH  /accounts/:id                                            */
-/*    delete → DELETE /accounts/:id                                           */
+/*  Accounts are READ-ONLY. A company (account) is created only when a Lead    */
+/*  is converted (POST /leads/:id/convert-to-account). This page just lists    */
+/*  them:  load → GET /accounts                                                */
 /* -------------------------------------------------------------------------- */
 
 const STATUS_TONE: Record<Account['status'], Tone> = {
@@ -38,23 +30,26 @@ const STATUS_TONE: Record<Account['status'], Tone> = {
   INACTIVE: 'gray',
 };
 
-const INDUSTRIES = [
-  'Technology',
-  'Manufacturing',
-  'Consulting',
-  'Finance',
-  'Healthcare',
-  'Retail',
-  'Education',
-  'Other',
-];
-
 export default function AccountsPage() {
   const toast = useToast();
-  const { accounts, addAccount, updateAccount, removeAccount } = useCrm();
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Account | null>(null);
+
+  useEffect(() => {
+    let on = true;
+    setLoading(true);
+    listAccounts()
+      .then((data) => on && setAccounts(data))
+      .catch(
+        (e) =>
+          on && toast.error('Could not load accounts', getErrorMessage(e, 'Admin access required.')),
+      )
+      .finally(() => on && setLoading(false));
+    return () => {
+      on = false;
+    };
+  }, [toast]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -76,41 +71,6 @@ export default function AccountsPage() {
     }),
     [accounts],
   );
-
-  const openNew = () => { setEditing(null); setOpen(true); };
-  const close = () => { setOpen(false); setEditing(null); };
-
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    const data = {
-      companyName: String(f.get('companyName') ?? '').trim(),
-      website: String(f.get('website') ?? '').trim(),
-      industry: String(f.get('industry') ?? ''),
-      email: String(f.get('email') ?? '').trim(),
-      phone: String(f.get('phone') ?? '').trim(),
-      city: String(f.get('city') ?? '').trim(),
-      state: String(f.get('state') ?? '').trim(),
-      country: String(f.get('country') ?? '').trim(),
-      notes: String(f.get('notes') ?? ''),
-      status: String(f.get('status') ?? 'ACTIVE') as Account['status'],
-    };
-    if (!data.companyName) return;
-
-    if (editing) {
-      updateAccount(editing.id, data);
-      toast.success('Account updated');
-    } else {
-      addAccount(data);
-      toast.success('Account created');
-    }
-    close();
-  };
-
-  const remove = (a: Account) => {
-    removeAccount(a.id);
-    toast.info('Account deleted', a.companyName);
-  };
 
   const columns: Column<Account>[] = [
     {
@@ -145,39 +105,20 @@ export default function AccountsPage() {
       render: (a) => [a.city, a.country].filter(Boolean).join(', ') || '—',
     },
     { key: 'email', header: 'Email', render: (a) => a.email || '—' },
+    { key: 'owner', header: 'Owner', render: (a) => a.ownerName || '—' },
     {
       key: 'status',
       header: 'Status',
       render: (a) => <StatusBadge tone={STATUS_TONE[a.status]}>{humanize(a.status)}</StatusBadge>,
-    },
-    {
-      key: 'actions',
-      header: '',
-      className: 'text-right',
-      render: (a) => (
-        <div className="flex justify-end gap-1">
-          <RowButton onClick={() => { setEditing(a); setOpen(true); }} aria-label="Edit" title="Edit">
-            <Pencil className="h-4 w-4" />
-          </RowButton>
-          <RowButton onClick={() => remove(a)} aria-label="Delete" title="Delete" danger>
-            <Trash2 className="h-4 w-4" />
-          </RowButton>
-        </div>
-      ),
     },
   ];
 
   return (
     <div>
       <PageHeader
-        eyebrow="CRM · Step 1"
+        eyebrow="CRM"
         title="Accounts"
-        subtitle="The companies you work with — the parent of contacts and opportunities."
-        action={
-          <Button size="sm" onClick={openNew}>
-            <Plus className="h-4 w-4" /> New account
-          </Button>
-        }
+        subtitle="The companies you work with — created automatically when a lead is converted."
       />
 
       {accounts.length > 0 && (
@@ -200,74 +141,21 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <LoadingCard />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={Building}
-          title={accounts.length === 0 ? 'Create your first account' : 'No matches'}
+          title={accounts.length === 0 ? 'No accounts yet' : 'No matches'}
           description={
             accounts.length === 0
-              ? 'An account is a company you do business with. Add one here — then you can create opportunities and contacts against it.'
+              ? 'Accounts appear here automatically when you convert a lead. Head to the Leads page and convert a qualified lead to create its account.'
               : 'Try a different search.'
-          }
-          action={
-            accounts.length === 0 ? (
-              <Button size="sm" onClick={openNew}>
-                <Plus className="h-4 w-4" /> New account
-              </Button>
-            ) : undefined
           }
         />
       ) : (
         <DataTable columns={columns} rows={filtered} />
       )}
-
-      <Modal open={open} onClose={close} title={editing ? 'Edit account' : 'New account'}>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <Input label="Company name" name="companyName" defaultValue={editing?.companyName} required />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Select
-              label="Industry"
-              name="industry"
-              defaultValue={editing?.industry ?? 'Technology'}
-              options={INDUSTRIES.map((i) => ({ value: i, label: i }))}
-            />
-            <Select
-              label="Status"
-              name="status"
-              defaultValue={editing?.status ?? 'ACTIVE'}
-              options={[
-                { value: 'ACTIVE', label: 'Active' },
-                { value: 'INACTIVE', label: 'Inactive' },
-              ]}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Website" name="website" defaultValue={editing?.website} placeholder="https://…" />
-            <Input label="Email" name="email" type="email" defaultValue={editing?.email} />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Phone" name="phone" defaultValue={editing?.phone} />
-            <Input label="City" name="city" defaultValue={editing?.city} />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="State" name="state" defaultValue={editing?.state} />
-            <Input label="Country" name="country" defaultValue={editing?.country} />
-          </div>
-
-          <Textarea label="Notes" name="notes" defaultValue={editing?.notes} />
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={close}>
-              Cancel
-            </Button>
-            <Button type="submit">{editing ? 'Save changes' : 'Create account'}</Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }
