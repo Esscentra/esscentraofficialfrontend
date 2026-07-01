@@ -16,6 +16,8 @@ export interface Lead {
   company?: string;
   source?: string;
   status: LeadStatus;
+  /** Set when the lead was promoted from an inquiry — links to its CRM Account. */
+  accountId?: string;
   notes?: string;
   createdAt?: string;
 }

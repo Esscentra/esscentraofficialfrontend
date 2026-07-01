@@ -1,5 +1,5 @@
 import api from './api';
-import type { ApiResponse, ContactInquiry, InquiryStatus, Lead } from '@/types';
+import type { Account, ApiResponse, ContactInquiry, InquiryStatus, Lead } from '@/types';
 
 /** Raw inquiry as returned by Mongo (uses _id). */
 interface RawInquiry {
@@ -57,12 +57,23 @@ export async function deleteInquiry(id: string): Promise<void> {
   await api.delete(`/contact-inquiries/${id}`);
 }
 
+/** Result of converting an inquiry: the new lead + the account it was linked
+ * to (account is null when the inquiry had no company name). */
+export interface ConvertInquiryResult {
+  lead: Lead;
+  account: Account | null;
+}
+
 /**
  * POST /contact-inquiries/:id/convert-to-lead  (admin) — promote an inquiry
  * into the sales pipeline as a Lead (source: WEBSITE).
+ *
+ * Requires the inquiry to be in status ASSIGNED (enforced by the backend).
+ * The backend also finds-or-creates a CRM Account from the company name and
+ * links the new lead to it.
  */
-export async function convertInquiryToLead(id: string): Promise<Lead> {
-  const { data } = await api.post<ApiResponse<Lead>>(
+export async function convertInquiryToLead(id: string): Promise<ConvertInquiryResult> {
+  const { data } = await api.post<ApiResponse<ConvertInquiryResult>>(
     `/contact-inquiries/${id}/convert-to-lead`,
     {},
   );

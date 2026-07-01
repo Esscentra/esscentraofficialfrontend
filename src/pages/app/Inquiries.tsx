@@ -69,8 +69,10 @@ export default function InquiriesPage() {
     try {
       const updated = await updateInquiryStatus(active.id, status);
       setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
+      // Keep the modal open and refresh the active row so the "Convert to lead"
+      // button re-evaluates immediately (it unlocks once status is ASSIGNED).
+      setActive(updated);
       toast.success('Inquiry updated');
-      setOpen(false);
     } catch (err) {
       toast.error('Update failed', getErrorMessage(err));
     } finally {
@@ -80,13 +82,26 @@ export default function InquiriesPage() {
 
   /* ------------------------------- Convert --------------------------------- */
   const convert = async (inq: ContactInquiry) => {
+    // Server enforces this too; guard the UI so the action can't be triggered
+    // before the inquiry has been assigned.
+    if (inq.status !== 'ASSIGNED') return;
     setBusy(true);
     try {
-      await convertInquiryToLead(inq.id);
-      setItems((prev) =>
-        prev.map((it) => (it.id === inq.id ? { ...it, isConverted: true } : it)),
+      const { account } = await convertInquiryToLead(inq.id);
+      // Conversion also completes the inquiry on the backend.
+      const done = (it: ContactInquiry) => ({
+        ...it,
+        isConverted: true,
+        status: 'COMPLETED' as InquiryStatus,
+      });
+      setItems((prev) => prev.map((it) => (it.id === inq.id ? done(it) : it)));
+      setActive((prev) => (prev && prev.id === inq.id ? done(prev) : prev));
+      toast.success(
+        'Converted to lead',
+        account
+          ? `${inq.name} is now a lead under ${account.companyName}.`
+          : `${inq.name} is now in the leads pipeline.`,
       );
-      toast.success('Converted to lead', `${inq.name} is now in the leads pipeline.`);
       setOpen(false);
     } catch (err) {
       toast.error('Convert failed', getErrorMessage(err));
@@ -198,14 +213,21 @@ export default function InquiriesPage() {
               {active.isConverted ? (
                 <span className="text-sm text-emerald-400">Already converted to a lead.</span>
               ) : (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => convert(active)}
-                >
-                  <UserPlus className="h-4 w-4" /> Convert to lead
-                </Button>
+                <div className="flex flex-col gap-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy || active.status !== 'ASSIGNED'}
+                    onClick={() => convert(active)}
+                  >
+                    <UserPlus className="h-4 w-4" /> Convert to lead
+                  </Button>
+                  {active.status !== 'ASSIGNED' && (
+                    <span className="text-xs text-slate-500">
+                      Set status to “Assigned” and update first.
+                    </span>
+                  )}
+                </div>
               )}
               <div className="flex gap-3">
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
