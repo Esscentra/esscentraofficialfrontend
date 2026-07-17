@@ -215,7 +215,7 @@ export default function InvestmentsPage() {
     <div>
       <PageHeader
         title="Investments"
-        subtitle={`Record investor contributions and attach the invoice PDF. Total recorded: ${inr.format(totalRecorded)}.`}
+        subtitle={`Money ACTUALLY RECEIVED from investors (with invoice PDFs). Total received: ${inr.format(totalRecorded)}. ⚠ If an investor only PLEDGED an amount to pay in installments, do NOT record it here — create it in Commitments and add each installment there as the money arrives.`}
         action={
           <Button onClick={openCreate}>
             <Plus /> Record investment

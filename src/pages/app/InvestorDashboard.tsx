@@ -279,10 +279,10 @@ export default function InvestorDashboard() {
               <Wallet className="h-5 w-5" />
             </span>
             <div>
-              <h3 className="font-semibold text-white">Your investments</h3>
+              <h3 className="font-semibold text-white">Payments received</h3>
               <p className="text-xs text-slate-500">
                 {myInv
-                  ? `${myInv.count} ${myInv.count === 1 ? 'contribution' : 'contributions'} on record`
+                  ? `${myInv.count} ${myInv.count === 1 ? 'payment' : 'payments'} on record — money actually paid in`
                   : 'Loading…'}
               </p>
             </div>
@@ -295,7 +295,7 @@ export default function InvestorDashboard() {
               {myInv ? fmt(myInv.totalInvested) : '—'}
             </p>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Total invested
+              Total paid in
             </p>
           </div>
         </div>
