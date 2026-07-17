@@ -19,7 +19,7 @@ import {
   createInvestment,
   updateInvestment,
   deleteInvestment as apiDeleteInvestment,
-  invoiceDownloadUrl,
+  downloadInvoice,
   type Investment,
 } from '@/lib/investmentApi';
 import type { User } from '@/types';
@@ -181,14 +181,19 @@ export default function InvestmentsPage() {
             >
               <FileText className="h-3.5 w-3.5" /> View
             </a>
-            <a
-              href={invoiceDownloadUrl(i.invoiceUrl)}
-              onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                void downloadInvoice(i.id, i.invoiceName || 'invoice.pdf').catch((err) =>
+                  toast.error('Download failed', getErrorMessage(err)),
+                );
+              }}
               className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
               title="Download invoice PDF"
             >
               <Download className="h-3.5 w-3.5" />
-            </a>
+            </button>
           </span>
         ) : (
           <StatusBadge tone="amber">no pdf</StatusBadge>

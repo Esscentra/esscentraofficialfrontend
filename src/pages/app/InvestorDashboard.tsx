@@ -21,12 +21,12 @@ import { useAuth } from '@/context/AuthContext';
 import { getDashboardStats, type DashboardStats } from '@/lib/dashboardApi';
 import {
   listMyInvestments,
-  invoiceDownloadUrl,
+  downloadInvoice,
   type MyInvestments,
 } from '@/lib/investmentApi';
 import {
   listMyCommitments,
-  attachmentDownloadUrl,
+  downloadExpenseAttachment,
   type Commitment,
 } from '@/lib/commitmentApi';
 import { getErrorMessage } from '@/lib/utils';
@@ -281,13 +281,16 @@ export default function InvestorDashboard() {
                                       <ImageIcon className="h-3.5 w-3.5" />
                                     )}
                                   </a>
-                                  <a
-                                    href={attachmentDownloadUrl(a.url)}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      void downloadExpenseAttachment(x.id, i, a.name).catch(() => {})
+                                    }
                                     title={`Download ${a.name}`}
                                     className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
                                   >
                                     <Download className="h-3 w-3" />
-                                  </a>
+                                  </button>
                                 </span>
                               ))}
                             </span>
@@ -360,12 +363,15 @@ export default function InvestorDashboard() {
                     >
                       <FileText className="h-3.5 w-3.5" /> View invoice
                     </a>
-                    <a
-                      href={invoiceDownloadUrl(inv.invoiceUrl)}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void downloadInvoice(inv.id, inv.invoiceName || 'invoice.pdf').catch(() => {})
+                      }
                       className="inline-flex items-center gap-1.5 rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-200 transition hover:bg-brand-500/20"
                     >
                       <Download className="h-3.5 w-3.5" /> Download
-                    </a>
+                    </button>
                   </span>
                 ) : (
                   <span className="text-xs text-slate-500">Invoice pending</span>

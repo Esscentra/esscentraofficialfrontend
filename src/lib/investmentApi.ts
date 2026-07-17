@@ -1,4 +1,5 @@
 import api from './api';
+import { downloadFromApi } from './download';
 import type { ApiResponse } from '@/types';
 
 /* ------------------------------ Investments ------------------------------ */
@@ -39,6 +40,7 @@ interface RawInvestment {
   investedAt?: string;
   notes?: string;
   invoiceUrl?: string;
+  invoiceOriginalName?: string;
   invoiceUploadedAt?: string;
   createdAt?: string;
 }
@@ -59,6 +61,8 @@ export interface Investment {
   investedAt?: string;
   notes?: string;
   invoiceUrl?: string;
+  /** Original filename of the invoice (used for a clean download name). */
+  invoiceName?: string;
   invoiceUploadedAt?: string;
   createdAt?: string;
 }
@@ -90,6 +94,7 @@ function mapInvestment(raw: RawInvestment): Investment {
     investedAt: raw.investedAt,
     notes: raw.notes,
     invoiceUrl: raw.invoiceUrl,
+    invoiceName: raw.invoiceOriginalName,
     invoiceUploadedAt: raw.invoiceUploadedAt,
     createdAt: raw.createdAt,
   };
@@ -168,9 +173,13 @@ export async function deleteInvestment(id: string): Promise<void> {
 }
 
 /**
- * Turn a Cloudinary invoice URL into a force-download URL.
- * `fl_attachment` makes the browser download the PDF instead of opening it.
+ * Download an investment's invoice PDF with its original filename
+ * (e.g. "yasowant.pdf"). Streams through the backend so the browser saves the
+ * real name instead of the storage id.
  */
-export function invoiceDownloadUrl(url: string): string {
-  return url.replace('/upload/', '/upload/fl_attachment/');
+export async function downloadInvoice(
+  investmentId: string,
+  filename = 'invoice.pdf',
+): Promise<void> {
+  await downloadFromApi(`/investments/${investmentId}/invoice`, filename);
 }

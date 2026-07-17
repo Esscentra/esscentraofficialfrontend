@@ -1,4 +1,5 @@
 import api from './api';
+import { downloadFromApi } from './download';
 import type { ApiResponse } from '@/types';
 import type { Investment, InvestorRef } from './investmentApi';
 
@@ -54,6 +55,7 @@ interface RawPayment {
   investedAt?: string;
   notes?: string;
   invoiceUrl?: string;
+  invoiceOriginalName?: string;
 }
 
 interface RawCommitment {
@@ -101,6 +103,7 @@ export interface CommitmentPayment {
   investedAt?: string;
   notes?: string;
   invoiceUrl?: string;
+  invoiceName?: string;
 }
 
 export interface Commitment {
@@ -155,6 +158,7 @@ function mapCommitment(raw: RawCommitment): Commitment {
       investedAt: p.investedAt,
       notes: p.notes,
       invoiceUrl: p.invoiceUrl,
+      invoiceName: p.invoiceOriginalName,
     })),
     expenses: raw.expenses?.map((e) => ({
       id: e.id ?? e._id ?? '',
@@ -244,9 +248,27 @@ export async function addExpense(commitmentId: string, input: ExpenseInput): Pro
   });
 }
 
-/** Force-download URL for a proof file (works for images and PDFs). */
-export function attachmentDownloadUrl(url: string): string {
-  return url.replace('/upload/', '/upload/fl_attachment/');
+/**
+ * Download an expense proof file (screenshot / receipt / bill) with its
+ * original filename. Streams through the backend so the saved name is correct.
+ */
+export async function downloadExpenseAttachment(
+  expenseId: string,
+  index: number,
+  filename = 'proof',
+): Promise<void> {
+  await downloadFromApi(
+    `/commitments/expenses/${expenseId}/attachments/${index}`,
+    filename,
+  );
+}
+
+/** Download an installment invoice with its original filename. */
+export async function downloadCommitmentInvoice(
+  paymentId: string,
+  filename = 'invoice.pdf',
+): Promise<void> {
+  await downloadFromApi(`/investments/${paymentId}/invoice`, filename);
 }
 
 /** DELETE /commitments/expenses/:expenseId  (admin) */

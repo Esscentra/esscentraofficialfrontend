@@ -23,7 +23,7 @@ import { FileField } from '@/components/ui/FileField';
 import { useToast } from '@/components/ui/Toast';
 import { getErrorMessage } from '@/lib/utils';
 import { listUsers } from '@/lib/adminApi';
-import { createInvestment, invoiceDownloadUrl } from '@/lib/investmentApi';
+import { createInvestment } from '@/lib/investmentApi';
 import {
   listCommitments,
   getCommitment,
@@ -32,6 +32,8 @@ import {
   deleteCommitment as apiDeleteCommitment,
   addExpense,
   deleteExpense as apiDeleteExpense,
+  downloadCommitmentInvoice,
+  downloadExpenseAttachment,
   type Commitment,
   type CommitmentStatus,
 } from '@/lib/commitmentApi';
@@ -552,13 +554,19 @@ export default function CommitmentsPage() {
                           >
                             <FileText className="h-4 w-4" />
                           </a>
-                          <a
-                            href={invoiceDownloadUrl(p.invoiceUrl)}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void downloadCommitmentInvoice(
+                                p.id,
+                                p.invoiceName || 'invoice.pdf',
+                              ).catch((err) => toast.error('Download failed', getErrorMessage(err)))
+                            }
                             className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
                             title="Download invoice"
                           >
                             <Download className="h-4 w-4" />
-                          </a>
+                          </button>
                         </span>
                       ) : (
                         <span className="text-[10px] uppercase tracking-wide text-slate-600">no invoice</span>
@@ -642,16 +650,29 @@ export default function CommitmentsPage() {
                       {x.attachments.length > 0 && (
                         <span className="flex items-center gap-0.5">
                           {x.attachments.map((a, i) => (
-                            <a
-                              key={i}
-                              href={a.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              title={a.isPdf ? `${a.name} (PDF)` : `${a.name} (image)`}
-                              className="grid h-7 w-7 place-items-center rounded-lg text-brand-300 hover:bg-brand-500/10"
-                            >
-                              {a.isPdf ? <FileText className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
-                            </a>
+                            <span key={i} className="flex items-center">
+                              <a
+                                href={a.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={a.isPdf ? `View ${a.name} (PDF)` : `View ${a.name} (image)`}
+                                className="grid h-7 w-7 place-items-center rounded-lg text-brand-300 hover:bg-brand-500/10"
+                              >
+                                {a.isPdf ? <FileText className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void downloadExpenseAttachment(x.id, i, a.name).catch((err) =>
+                                    toast.error('Download failed', getErrorMessage(err)),
+                                  )
+                                }
+                                title={`Download ${a.name}`}
+                                className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
+                              >
+                                <Download className="h-3 w-3" />
+                              </button>
+                            </span>
                           ))}
                         </span>
                       )}
