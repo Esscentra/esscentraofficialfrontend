@@ -6,6 +6,7 @@ import {
   FileText,
   FolderKanban,
   HandCoins,
+  Image as ImageIcon,
   Receipt,
   Target,
   TrendingUp,
@@ -23,7 +24,11 @@ import {
   invoiceDownloadUrl,
   type MyInvestments,
 } from '@/lib/investmentApi';
-import { listMyCommitments, type Commitment } from '@/lib/commitmentApi';
+import {
+  listMyCommitments,
+  attachmentDownloadUrl,
+  type Commitment,
+} from '@/lib/commitmentApi';
 import { getErrorMessage } from '@/lib/utils';
 
 /* ----------------------------- formatting ----------------------------- */
@@ -259,6 +264,34 @@ export default function InvestorDashboard() {
                                 : ''}
                             </span>
                           </span>
+                          {x.attachments.length > 0 && (
+                            <span className="flex shrink-0 items-center gap-0.5">
+                              {x.attachments.map((a, i) => (
+                                <span key={i} className="flex items-center">
+                                  <a
+                                    href={a.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={`View ${a.name}`}
+                                    className="grid h-7 w-7 place-items-center rounded-lg text-brand-300 hover:bg-brand-500/10"
+                                  >
+                                    {a.isPdf ? (
+                                      <FileText className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <ImageIcon className="h-3.5 w-3.5" />
+                                    )}
+                                  </a>
+                                  <a
+                                    href={attachmentDownloadUrl(a.url)}
+                                    title={`Download ${a.name}`}
+                                    className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                  </a>
+                                </span>
+                              ))}
+                            </span>
+                          )}
                           <span className="tabular-nums text-slate-400">{fmtFull(x.amount)}</span>
                         </li>
                       ))}

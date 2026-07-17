@@ -3,6 +3,7 @@ import {
   Download,
   FileText,
   HandCoins,
+  Image as ImageIcon,
   Pencil,
   Plus,
   Receipt,
@@ -217,6 +218,9 @@ export default function CommitmentsPage() {
     e.preventDefault();
     if (!detail) return;
     const f = new FormData(e.currentTarget);
+    const proofs = f
+      .getAll('attachments')
+      .filter((x): x is File => x instanceof File && x.size > 0);
     setBusy(true);
     try {
       await addExpense(detail.id, {
@@ -224,6 +228,7 @@ export default function CommitmentsPage() {
         category: String(f.get('category') ?? ''),
         description: String(f.get('description') ?? ''),
         spentAt: String(f.get('spentAt') ?? ''),
+        attachments: proofs,
       });
       toast.success('Expense recorded');
       setShowExpForm(false);
@@ -588,6 +593,21 @@ export default function CommitmentsPage() {
                     <Input label="Category" name="category" placeholder="Marketing / Salaries / Tools…" />
                     <Input label="Description" name="description" placeholder="What it was spent on" />
                   </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Proof (screenshot / bank receipt / invoice bill — PNG, JPG or PDF, up to 5)
+                    </label>
+                    <input
+                      type="file"
+                      name="attachments"
+                      multiple
+                      accept="image/png,image/jpeg,image/webp,application/pdf"
+                      className="block w-full cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-2.5 text-xs text-slate-400 transition hover:border-brand-400/50 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-200 hover:file:bg-white/20"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      The investor will see and can download these proof files.
+                    </p>
+                  </div>
                   <p className="text-xs text-slate-500">
                     Available balance: <span className="text-emerald-300">{inr.format(detail.balanceAvailable)}</span>{' '}
                     — expenses can't exceed received funds.
@@ -619,6 +639,22 @@ export default function CommitmentsPage() {
                           {x.description ? ` · ${x.description}` : ''}
                         </p>
                       </div>
+                      {x.attachments.length > 0 && (
+                        <span className="flex items-center gap-0.5">
+                          {x.attachments.map((a, i) => (
+                            <a
+                              key={i}
+                              href={a.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={a.isPdf ? `${a.name} (PDF)` : `${a.name} (image)`}
+                              className="grid h-7 w-7 place-items-center rounded-lg text-brand-300 hover:bg-brand-500/10"
+                            >
+                              {a.isPdf ? <FileText className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                            </a>
+                          ))}
+                        </span>
+                      )}
                       <RowButton danger onClick={() => onDeleteExpense(x.id)} aria-label="Delete expense">
                         <Trash2 className="h-4 w-4" />
                       </RowButton>

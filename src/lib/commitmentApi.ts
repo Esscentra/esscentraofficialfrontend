@@ -29,6 +29,13 @@ interface RawRef {
   email?: string;
 }
 
+interface RawAttachment {
+  url: string;
+  resourceType?: 'image' | 'raw';
+  originalName?: string;
+  mimeType?: string;
+}
+
 interface RawExpense {
   _id?: string;
   id?: string;
@@ -36,6 +43,7 @@ interface RawExpense {
   category?: string;
   description?: string;
   spentAt?: string;
+  attachments?: RawAttachment[];
   createdAt?: string;
 }
 
@@ -70,12 +78,21 @@ interface RawCommitment {
   expenses?: RawExpense[];
 }
 
+/** Proof file on an expense: screenshot / bank receipt / invoice bill. */
+export interface ExpenseAttachment {
+  url: string;
+  /** True when the file is a PDF (renders/downloads differently from images). */
+  isPdf: boolean;
+  name: string;
+}
+
 export interface CommitmentExpense {
   id: string;
   amount: number;
   category?: string;
   description?: string;
   spentAt?: string;
+  attachments: ExpenseAttachment[];
 }
 
 export interface CommitmentPayment {
@@ -145,6 +162,11 @@ function mapCommitment(raw: RawCommitment): Commitment {
       category: e.category,
       description: e.description,
       spentAt: e.spentAt,
+      attachments: (e.attachments ?? []).map((a, i) => ({
+        url: a.url,
+        isPdf: a.resourceType === 'raw' || a.mimeType === 'application/pdf',
+        name: a.originalName || `proof-${i + 1}`,
+      })),
     })),
   };
 }
@@ -201,11 +223,30 @@ export interface ExpenseInput {
   category?: string;
   description?: string;
   spentAt?: string;
+  /** Proof files: screenshots, bank receipts, invoice bills (PNG/JPG/PDF, max 5). */
+  attachments?: File[];
 }
 
-/** POST /commitments/:id/expenses  (admin) — record money spent from the fund. */
+/**
+ * POST /commitments/:id/expenses  (admin, multipart) — record money spent
+ * from the fund, with optional proof files the investor can view/download.
+ */
 export async function addExpense(commitmentId: string, input: ExpenseInput): Promise<void> {
-  await api.post(`/commitments/${commitmentId}/expenses`, input);
+  const form = new FormData();
+  form.append('amount', String(input.amount));
+  if (input.category) form.append('category', input.category);
+  if (input.description) form.append('description', input.description);
+  if (input.spentAt) form.append('spentAt', input.spentAt);
+  for (const f of input.attachments ?? []) form.append('attachments', f);
+
+  await api.post(`/commitments/${commitmentId}/expenses`, form, {
+    headers: { 'Content-Type': undefined } as never,
+  });
+}
+
+/** Force-download URL for a proof file (works for images and PDFs). */
+export function attachmentDownloadUrl(url: string): string {
+  return url.replace('/upload/', '/upload/fl_attachment/');
 }
 
 /** DELETE /commitments/expenses/:expenseId  (admin) */
