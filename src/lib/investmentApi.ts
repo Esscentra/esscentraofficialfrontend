@@ -22,10 +22,18 @@ interface RawRef {
   email?: string;
 }
 
+interface RawCommitmentRef {
+  _id?: string;
+  id?: string;
+  title?: string;
+  committedAmount?: number;
+}
+
 interface RawInvestment {
   _id?: string;
   id?: string;
   investorId?: RawRef | string;
+  commitmentId?: RawCommitmentRef | string;
   amount: number;
   currency?: string;
   investedAt?: string;
@@ -44,6 +52,8 @@ export interface InvestorRef {
 export interface Investment {
   id: string;
   investor?: InvestorRef;
+  /** Present when this payment is an installment of a commitment. */
+  commitment?: { id: string; title: string };
   amount: number;
   currency: string;
   investedAt?: string;
@@ -59,8 +69,15 @@ function refName(ref?: RawRef): string {
 
 function mapInvestment(raw: RawInvestment): Investment {
   const investorRef = typeof raw.investorId === 'object' ? raw.investorId : undefined;
+  const commitmentRef = typeof raw.commitmentId === 'object' ? raw.commitmentId : undefined;
   return {
     id: raw.id ?? raw._id ?? '',
+    commitment: commitmentRef
+      ? {
+          id: commitmentRef.id ?? commitmentRef._id ?? '',
+          title: commitmentRef.title ?? 'Commitment',
+        }
+      : undefined,
     investor: investorRef
       ? {
           id: investorRef.id ?? investorRef._id ?? '',
@@ -104,6 +121,8 @@ export async function listMyInvestments(): Promise<MyInvestments> {
 
 export interface InvestmentInput {
   investorId: string;
+  /** Link this payment to a commitment ('' detaches it). */
+  commitmentId?: string;
   amount: number;
   investedAt?: string;
   notes?: string;
@@ -114,6 +133,7 @@ export interface InvestmentInput {
 function toForm(input: Partial<InvestmentInput>): FormData {
   const form = new FormData();
   if (input.investorId) form.append('investorId', input.investorId);
+  if (input.commitmentId !== undefined) form.append('commitmentId', input.commitmentId);
   if (input.amount !== undefined) form.append('amount', String(input.amount));
   if (input.investedAt) form.append('investedAt', input.investedAt);
   if (input.notes !== undefined) form.append('notes', input.notes);

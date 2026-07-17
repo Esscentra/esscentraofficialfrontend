@@ -23,6 +23,7 @@ import RolesPage from './pages/app/Roles';
 import UsersPage from './pages/app/Users';
 import KycReviewPage from './pages/app/KycReview';
 import InvestmentsPage from './pages/app/Investments';
+import CommitmentsPage from './pages/app/Commitments';
 
 export default function App() {
   return (
@@ -94,6 +95,7 @@ export default function App() {
         <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="kyc-review" element={<AdminRoute><KycReviewPage /></AdminRoute>} />
         <Route path="investments" element={<AdminRoute><InvestmentsPage /></AdminRoute>} />
+        <Route path="commitments" element={<AdminRoute><CommitmentsPage /></AdminRoute>} />
         {/* Super-admin only: managing role types */}
         <Route path="roles" element={<SuperAdminRoute><RolesPage /></SuperAdminRoute>} />
 

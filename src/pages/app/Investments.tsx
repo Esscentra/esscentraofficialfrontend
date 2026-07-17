@@ -156,6 +156,16 @@ export default function InvestmentsPage() {
     },
     { key: 'investedAt', header: 'Date', render: (i) => fmtDate(i.investedAt) },
     {
+      key: 'commitment',
+      header: 'Commitment',
+      render: (i) =>
+        i.commitment ? (
+          <StatusBadge tone="violet">{i.commitment.title}</StatusBadge>
+        ) : (
+          <span className="text-xs text-slate-600">standalone</span>
+        ),
+    },
+    {
       key: 'invoice',
       header: 'Invoice',
       render: (i) =>

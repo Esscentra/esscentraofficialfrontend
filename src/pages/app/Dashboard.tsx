@@ -6,6 +6,7 @@ import {
   Building2,
   FileText,
   FolderKanban,
+  HandCoins,
   IndianRupee,
   ListChecks,
   Mail,
@@ -43,6 +44,7 @@ const CARDS: Card[] = [
   { to: '/app/users', label: 'Users', icon: UserCog, hint: 'Manage members and roles', adminOnly: true },
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, hint: 'Verify identity submissions', adminOnly: true },
   { to: '/app/investments', label: 'Investments', icon: IndianRupee, hint: 'Record contributions & invoices', adminOnly: true },
+  { to: '/app/commitments', label: 'Commitments', icon: HandCoins, hint: 'Pledges, installments & spending', adminOnly: true },
   { to: '/app/roles', label: 'Roles', icon: ShieldHalf, hint: 'Define team access roles', superAdminOnly: true },
 ];
 

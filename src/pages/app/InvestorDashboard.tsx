@@ -5,6 +5,8 @@ import {
   Download,
   FileText,
   FolderKanban,
+  HandCoins,
+  Receipt,
   Target,
   TrendingUp,
   Trophy,
@@ -21,6 +23,7 @@ import {
   invoiceDownloadUrl,
   type MyInvestments,
 } from '@/lib/investmentApi';
+import { listMyCommitments, type Commitment } from '@/lib/commitmentApi';
 import { getErrorMessage } from '@/lib/utils';
 
 /* ----------------------------- formatting ----------------------------- */
@@ -91,6 +94,7 @@ export default function InvestorDashboard() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [myInv, setMyInv] = useState<MyInvestments | null>(null);
+  const [myCommitments, setMyCommitments] = useState<Commitment[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,6 +107,9 @@ export default function InvestorDashboard() {
     listMyInvestments()
       .then((m) => active && setMyInv(m))
       .catch(() => active && setMyInv({ items: [], totalInvested: 0, count: 0 }));
+    listMyCommitments()
+      .then((c) => active && setMyCommitments(c))
+      .catch(() => active && setMyCommitments([]));
     return () => {
       active = false;
     };
@@ -177,6 +184,92 @@ export default function InvestorDashboard() {
           across {t.pipelineCount} open {t.pipelineCount === 1 ? 'deal' : 'deals'}
         </p>
       </div>
+
+      {/* Your commitments — pledge progress + how the funds were used */}
+      {myCommitments && myCommitments.length > 0 && (
+        <div className="mb-4 space-y-4">
+          {myCommitments.map((c) => {
+            const pct =
+              c.committedAmount > 0
+                ? Math.min(100, Math.round((c.receivedTotal / c.committedAmount) * 100))
+                : 0;
+            return (
+              <div key={c.id} className="glass-card p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-emerald-400/25 to-emerald-700/10 text-emerald-200 ring-1 ring-emerald-400/30">
+                      <HandCoins className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h3 className="font-semibold text-white">{c.title}</h3>
+                      <p className="text-xs text-slate-500">
+                        Started {c.startDate ? new Date(c.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        {' · '}
+                        {c.status === 'ACTIVE' ? 'Active' : c.status === 'COMPLETED' ? 'Completed' : 'Cancelled'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-400">
+                    <span className="font-semibold text-white tabular-nums">{pct}%</span> funded
+                  </p>
+                </div>
+
+                {/* Committed / received / remaining / spent / balance */}
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                  {[
+                    { label: 'Committed', value: fmt(c.committedAmount) },
+                    { label: 'Paid so far', value: fmt(c.receivedTotal) },
+                    { label: 'Remaining', value: fmt(c.remainingToReceive) },
+                    { label: 'Spent', value: fmt(c.spentTotal) },
+                    { label: 'Balance', value: fmt(c.balanceAvailable) },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <p className="text-sm font-bold text-white tabular-nums">{s.value}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        {s.label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Funding progress meter */}
+                <div className="mt-4 h-2.5 w-full rounded-full bg-brand-500/15">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+
+                {/* How the funds were used */}
+                {c.expenses && c.expenses.length > 0 && (
+                  <div className="mt-4 border-t border-white/10 pt-3">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      How your funds were used
+                    </p>
+                    <ul className="space-y-1.5">
+                      {c.expenses.map((x) => (
+                        <li key={x.id} className="flex items-center gap-2.5 text-sm">
+                          <Receipt className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                          <span className="min-w-0 flex-1 truncate text-slate-300">
+                            {x.category || x.description || 'Expense'}
+                            {x.category && x.description ? ` — ${x.description}` : ''}
+                            <span className="ml-1.5 text-xs text-slate-500">
+                              {x.spentAt
+                                ? new Date(x.spentAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                                : ''}
+                            </span>
+                          </span>
+                          <span className="tabular-nums text-slate-400">{fmtFull(x.amount)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Your investments — personal records + invoice PDFs */}
       <div className="glass-card mb-6 p-5">
