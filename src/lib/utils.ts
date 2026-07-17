@@ -16,6 +16,14 @@ export function isSuperAdminRole(role?: string): boolean {
   return role === 'SUPER_ADMIN';
 }
 
+/**
+ * Read-only stakeholder: sees aggregated business KPIs on the dashboard,
+ * never record-level CRM data (leads, contacts, deals, projects…).
+ */
+export function isInvestorRole(role?: string): boolean {
+  return role === 'INVESTOR';
+}
+
 /** Deterministic gradient avatar from a string (used when no photo is set). */
 export function initials(name: string): string {
   return name

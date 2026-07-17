@@ -6,6 +6,7 @@ import {
   Building2,
   FileText,
   FolderKanban,
+  IndianRupee,
   ListChecks,
   Mail,
   MessageSquare,
@@ -16,7 +17,8 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '@/context/AuthContext';
-import { isAdminRole, isSuperAdminRole } from '@/lib/utils';
+import { isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
+import InvestorDashboard from './InvestorDashboard';
 
 type Card = {
   to: string;
@@ -40,6 +42,7 @@ const CARDS: Card[] = [
   // Admin governance
   { to: '/app/users', label: 'Users', icon: UserCog, hint: 'Manage members and roles', adminOnly: true },
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, hint: 'Verify identity submissions', adminOnly: true },
+  { to: '/app/investments', label: 'Investments', icon: IndianRupee, hint: 'Record contributions & invoices', adminOnly: true },
   { to: '/app/roles', label: 'Roles', icon: ShieldHalf, hint: 'Define team access roles', superAdminOnly: true },
 ];
 
@@ -58,6 +61,12 @@ export default function Dashboard() {
       }),
     [isAdmin, isSuperAdmin],
   );
+
+  // Read-only stakeholders get the KPI overview instead of workspace cards.
+  // (Placed after the hooks above so hook order stays stable.)
+  if (isInvestorRole(user?.role)) {
+    return <InvestorDashboard />;
+  }
 
   return (
     <div>

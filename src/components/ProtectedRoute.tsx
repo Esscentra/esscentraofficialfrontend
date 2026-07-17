@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { isAdminRole, isSuperAdminRole } from '@/lib/utils';
+import { isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
 import { FullPageLoader } from './FullPageLoader';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -47,6 +47,25 @@ export function SuperAdminRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
   if (!isSuperAdminRole(user?.role)) {
+    return <Navigate to="/app" replace />;
+  }
+  return <>{children}</>;
+}
+
+/**
+ * Guards operational CRM pages (leads, deals, projects, tasks…). Read-only
+ * stakeholders (INVESTOR) are sent back to the dashboard, which is the only
+ * screen they get: aggregated KPIs without record-level data.
+ */
+export function StaffRoute({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullPageLoader />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  if (isInvestorRole(user?.role)) {
     return <Navigate to="/app" replace />;
   }
   return <>{children}</>;

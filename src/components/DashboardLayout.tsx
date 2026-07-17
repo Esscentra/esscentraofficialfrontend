@@ -6,6 +6,8 @@ import {
   Building2,
   FileText,
   FolderKanban,
+  IndianRupee,
+  LayoutDashboard,
   ListChecks,
   LogOut,
   Mail,
@@ -25,21 +27,31 @@ import { Logo } from './Logo';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './ui/Toast';
-import { cn, initials, isAdminRole, isSuperAdminRole } from '@/lib/utils';
+import { cn, initials, isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
 
 const NAV = [
+  { to: '/app', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
-  { to: '/app/leads', label: 'Leads', icon: Users },
-  { to: '/app/accounts', label: 'Accounts', icon: Building },
-  { to: '/app/projects', label: 'Projects', icon: FolderKanban },
-  { to: '/app/tasks', label: 'Tasks', icon: ListChecks },
-  { to: '/app/contacts', label: 'Contacts', icon: Building2 },
-  { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare },
-  { to: '/app/blog', label: 'Blog', icon: FileText },
-  { to: '/app/newsletter', label: 'Newsletter', icon: Mail },
+  { to: '/app/investments', label: 'Investments', icon: IndianRupee, adminOnly: true },
+  { to: '/app/leads', label: 'Leads', icon: Users, staffOnly: true },
+  { to: '/app/accounts', label: 'Accounts', icon: Building, staffOnly: true },
+  { to: '/app/projects', label: 'Projects', icon: FolderKanban, staffOnly: true },
+  { to: '/app/tasks', label: 'Tasks', icon: ListChecks, staffOnly: true },
+  { to: '/app/contacts', label: 'Contacts', icon: Building2, staffOnly: true },
+  { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare, staffOnly: true },
+  { to: '/app/blog', label: 'Blog', icon: FileText, staffOnly: true },
+  { to: '/app/newsletter', label: 'Newsletter', icon: Mail, staffOnly: true },
   { to: '/app/roles', label: 'Roles', icon: ShieldHalf, superAdminOnly: true },
-];
+] as Array<{
+  to: string;
+  label: string;
+  icon: typeof Users;
+  end?: boolean;
+  adminOnly?: boolean;
+  superAdminOnly?: boolean;
+  staffOnly?: boolean;
+}>;
 
 const SIDEBAR_KEY = 'esscentra.sidebar.collapsed';
 
@@ -57,11 +69,14 @@ export function DashboardLayout() {
   }, [collapsed]);
 
   // Gate links by tier: Users/KYC Review = admin+, Roles = super admin only.
+  // Investors (read-only stakeholders) only get the KPI overview.
   const isAdmin = isAdminRole(user?.role);
   const isSuperAdmin = isSuperAdminRole(user?.role);
+  const isInvestor = isInvestorRole(user?.role);
   const navItems = NAV.filter((item) => {
     if (item.superAdminOnly) return isSuperAdmin;
     if (item.adminOnly) return isAdmin;
+    if (item.staffOnly) return !isInvestor;
     return true;
   });
 
@@ -124,6 +139,7 @@ export function DashboardLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.end}
               onClick={() => setOpen(false)}
               title={collapsed ? item.label : undefined}
               className={({ isActive }) => linkClass(isActive)}

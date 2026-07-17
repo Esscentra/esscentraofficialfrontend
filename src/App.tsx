@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AdminRoute, GuestRoute, ProtectedRoute, SuperAdminRoute } from './components/ProtectedRoute';
+import { AdminRoute, GuestRoute, ProtectedRoute, StaffRoute, SuperAdminRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
@@ -22,6 +22,7 @@ import NewsletterPage from './pages/app/Newsletter';
 import RolesPage from './pages/app/Roles';
 import UsersPage from './pages/app/Users';
 import KycReviewPage from './pages/app/KycReview';
+import InvestmentsPage from './pages/app/Investments';
 
 export default function App() {
   return (
@@ -92,18 +93,20 @@ export default function App() {
         {/* Admin governance pages */}
         <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="kyc-review" element={<AdminRoute><KycReviewPage /></AdminRoute>} />
+        <Route path="investments" element={<AdminRoute><InvestmentsPage /></AdminRoute>} />
         {/* Super-admin only: managing role types */}
         <Route path="roles" element={<SuperAdminRoute><RolesPage /></SuperAdminRoute>} />
 
-        <Route path="leads" element={<LeadsPage />} />
-        <Route path="opportunities" element={<OpportunitiesPage />} />
-        <Route path="accounts" element={<AccountsPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="tasks" element={<TasksPage />} />
-        <Route path="contacts" element={<ContactsPage />} />
-        <Route path="inquiries" element={<InquiriesPage />} />
-        <Route path="blog" element={<BlogPage />} />
-        <Route path="newsletter" element={<NewsletterPage />} />
+        {/* Operational CRM pages — blocked for read-only INVESTOR accounts */}
+        <Route path="leads" element={<StaffRoute><LeadsPage /></StaffRoute>} />
+        <Route path="opportunities" element={<StaffRoute><OpportunitiesPage /></StaffRoute>} />
+        <Route path="accounts" element={<StaffRoute><AccountsPage /></StaffRoute>} />
+        <Route path="projects" element={<StaffRoute><ProjectsPage /></StaffRoute>} />
+        <Route path="tasks" element={<StaffRoute><TasksPage /></StaffRoute>} />
+        <Route path="contacts" element={<StaffRoute><ContactsPage /></StaffRoute>} />
+        <Route path="inquiries" element={<StaffRoute><InquiriesPage /></StaffRoute>} />
+        <Route path="blog" element={<StaffRoute><BlogPage /></StaffRoute>} />
+        <Route path="newsletter" element={<StaffRoute><NewsletterPage /></StaffRoute>} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

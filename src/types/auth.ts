@@ -1,5 +1,12 @@
 /** Roles returned by the Esscentra backend. */
-export type AccountRole = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'USER' | 'CLIENT';
+export type AccountRole =
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'MANAGER'
+  | 'ACCOUNTANT'
+  | 'USER'
+  | 'CLIENT'
+  | 'INVESTOR';
 
 /** Account lifecycle status (matches the backend User model enum). */
 export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
