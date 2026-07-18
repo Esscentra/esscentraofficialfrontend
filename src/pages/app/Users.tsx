@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Search, ShieldCheck, UserCog, Users } from 'lucide-react';
+import {
+  BadgeCheck,
+  ChevronRight,
+  Eye,
+  HandCoins,
+  Mail,
+  Phone,
+  Search,
+  ShieldCheck,
+  UserCog,
+  Users,
+} from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataTable, type Column } from '@/components/ui/DataTable';
@@ -12,8 +23,9 @@ import { RowButton } from '@/components/ui/RowButton';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { getErrorMessage, initials, isSuperAdminRole } from '@/lib/utils';
+import { getErrorMessage, initials, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
 import { listRoles, listUsers, updateUserRole } from '@/lib/adminApi';
+import { InvestorRecordsModal } from '@/components/InvestorRecordsModal';
 import type { Role, User } from '@/types';
 
 const ROLE_TONE: Record<string, Tone> = {
@@ -47,6 +59,33 @@ function fmtDate(iso?: string) {
     : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+/** A single label/value row inside the user-profile detail modal. */
+function Detail({
+  label,
+  value,
+  icon,
+  mono,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</dt>
+      <dd
+        className={`mt-0.5 flex items-center gap-1.5 break-words text-sm text-slate-200 ${
+          mono ? 'font-mono text-xs text-slate-400' : ''
+        }`}
+      >
+        {icon && <span className="shrink-0 text-slate-500">{icon}</span>}
+        <span className="min-w-0 break-words">{value}</span>
+      </dd>
+    </div>
+  );
+}
+
 export default function UsersPage() {
   const toast = useToast();
   const { user: me } = useAuth();
@@ -63,6 +102,11 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [roleId, setRoleId] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // View-profile modal state
+  const [viewing, setViewing] = useState<User | null>(null);
+  // Investor records modal (commitments, investments, invoices, bills)
+  const [records, setRecords] = useState<User | null>(null);
 
   /* ----------------------------- Load users + roles ----------------------------- */
   useEffect(() => {
@@ -208,7 +252,10 @@ export default function UsersPage() {
         // Only a super admin may modify a super-admin account.
         const locked = isSuperAdminRole(u.role) && !iAmSuper;
         return (
-          <div className="flex justify-end gap-1">
+          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <RowButton onClick={() => setViewing(u)} aria-label="View profile" title="View profile">
+              <Eye className="h-4 w-4" />
+            </RowButton>
             <RowButton
               onClick={() => openEdit(u)}
               aria-label="Change role"
@@ -268,12 +315,134 @@ export default function UsersPage() {
         />
       ) : (
         <>
-          <DataTable columns={columns} rows={filtered} />
+          <DataTable columns={columns} rows={filtered} onRowClick={setViewing} />
           <p className="mt-3 text-xs text-slate-500">
             Showing {filtered.length} of {items.length} users
           </p>
         </>
       )}
+
+      {/* View full profile modal */}
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title="User profile">
+        {viewing && (
+          <div className="space-y-5">
+            {/* Identity header */}
+            <div className="flex items-center gap-4">
+              <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-lg font-bold !text-white ring-1 ring-white/20">
+                {viewing.avatarUrl ? (
+                  <img src={viewing.avatarUrl} alt={viewing.name} className="h-full w-full object-cover" />
+                ) : (
+                  initials(viewing.name)
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-lg font-bold text-white">{viewing.name}</h3>
+                  {viewing.emailVerified ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 ring-1 ring-emerald-500/30">
+                      <BadgeCheck className="h-3 w-3" /> Verified
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-500/30">
+                      Unverified
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-slate-400">
+                  <Mail className="h-3.5 w-3.5 shrink-0" /> {viewing.email}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <StatusBadge tone={ROLE_TONE[viewing.role] ?? 'gray'}>{humanize(viewing.role)}</StatusBadge>
+                  {viewing.status && (
+                    <StatusBadge tone={STATUS_TONE[viewing.status] ?? 'gray'}>
+                      {humanize(viewing.status)}
+                    </StatusBadge>
+                  )}
+                  <StatusBadge tone={KYC_TONE[viewing.kycStatus ?? 'NOT_SUBMITTED'] ?? 'gray'}>
+                    KYC: {humanize(viewing.kycStatus ?? 'NOT_SUBMITTED')}
+                  </StatusBadge>
+                </div>
+              </div>
+            </div>
+
+            {/* Full detail grid */}
+            <dl className="grid gap-x-4 gap-y-4 border-t border-white/10 pt-5 sm:grid-cols-2">
+              <Detail label="First name" value={viewing.firstName || '—'} />
+              <Detail label="Last name" value={viewing.lastName || '—'} />
+              <Detail
+                label="Phone"
+                value={viewing.phone || '—'}
+                icon={<Phone className="h-3.5 w-3.5" />}
+              />
+              <Detail label="Role" value={humanize(viewing.role)} />
+              <Detail label="Account status" value={viewing.status ? humanize(viewing.status) : '—'} />
+              <Detail
+                label="KYC status"
+                value={humanize(viewing.kycStatus ?? 'NOT_SUBMITTED')}
+              />
+              <Detail label="Email verified" value={viewing.emailVerified ? 'Yes' : 'No'} />
+              <Detail label="Member since" value={fmtDate(viewing.createdAt)} />
+              {viewing.bio && (
+                <div className="sm:col-span-2">
+                  <Detail label="Bio" value={viewing.bio} />
+                </div>
+              )}
+              <div className="sm:col-span-2">
+                <Detail label="User ID" value={viewing.id} mono />
+              </div>
+            </dl>
+
+            {/* Investor: full financial records */}
+            {isInvestorRole(viewing.role) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const u = viewing;
+                  setViewing(null);
+                  setRecords(u);
+                }}
+                className="glass-card card-lift flex w-full items-center gap-3 p-4 text-left"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-400/25 to-brand-700/10 text-brand-200 ring-1 ring-brand-400/30">
+                  <HandCoins className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-white">
+                    View investor records
+                  </span>
+                  <span className="block text-xs text-slate-400">
+                    Commitments, investments, invoices &amp; bills — with preview
+                  </span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+              </button>
+            )}
+
+            <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
+              <Button variant="secondary" onClick={() => setViewing(null)}>
+                Close
+              </Button>
+              {!(isSuperAdminRole(viewing.role) && !iAmSuper) && (
+                <Button
+                  onClick={() => {
+                    const u = viewing;
+                    setViewing(null);
+                    openEdit(u);
+                  }}
+                >
+                  <UserCog className="h-4 w-4" /> Change role
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <InvestorRecordsModal
+        open={!!records}
+        onClose={() => setRecords(null)}
+        investor={records}
+      />
 
       {/* Change role modal */}
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Change role">

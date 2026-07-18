@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/Toast';
 import { initials } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/utils';
 import { approveKyc, listAllKyc, rejectKyc } from '@/lib/kycApi';
+import { listUsers } from '@/lib/adminApi';
 import type { KycStatus, KycSubmission } from '@/types';
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -38,6 +39,9 @@ export default function KycReviewPage() {
   const toast = useToast();
 
   const [items, setItems] = useState<KycSubmission[]>([]);
+  // userId → profile image, so we can show the user's avatar (the KYC payload
+  // only carries id/name/email). Populated from the admin users list.
+  const [avatarById, setAvatarById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | KycStatus>('ALL');
@@ -50,8 +54,17 @@ export default function KycReviewPage() {
   useEffect(() => {
     let on = true;
     setLoading(true);
-    listAllKyc()
-      .then((data) => on && setItems(data))
+    // Users list is best-effort — KYC still loads if it fails.
+    Promise.all([listAllKyc(), listUsers().catch(() => [])])
+      .then(([data, users]) => {
+        if (!on) return;
+        setItems(data);
+        const map: Record<string, string> = {};
+        users.forEach((u) => {
+          if (u.avatarUrl) map[u.id] = u.avatarUrl;
+        });
+        setAvatarById(map);
+      })
       .catch((e) => on && toast.error('Could not load KYC', getErrorMessage(e, 'Admin access required.')))
       .finally(() => on && setLoading(false));
     return () => {
@@ -119,17 +132,25 @@ export default function KycReviewPage() {
     {
       key: 'user',
       header: 'User',
-      render: (k) => (
-        <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold !text-white ring-1 ring-white/20">
-            {initials(k.user?.name ?? k.fullName)}
+      render: (k) => {
+        const avatar = k.user?.id ? avatarById[k.user.id] : undefined;
+        const name = k.user?.name ?? k.fullName;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold !text-white ring-1 ring-white/20">
+              {avatar ? (
+                <img src={avatar} alt={name} className="h-full w-full object-cover" />
+              ) : (
+                initials(name)
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-medium text-white">{name}</p>
+              <p className="truncate text-xs text-slate-400">{k.user?.email ?? '—'}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="truncate font-medium text-white">{k.user?.name ?? k.fullName}</p>
-            <p className="truncate text-xs text-slate-400">{k.user?.email ?? '—'}</p>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     { key: 'documentType', header: 'Document', render: (k) => humanize(k.documentType) },
     { key: 'documentNumber', header: 'Number', render: (k) => k.documentNumber },
@@ -139,6 +160,28 @@ export default function KycReviewPage() {
       render: (k) => <StatusBadge tone={STATUS_TONE[k.status] ?? 'gray'}>{humanize(k.status)}</StatusBadge>,
     },
     { key: 'createdAt', header: 'Submitted', render: (k) => fmtDate(k.createdAt) },
+    {
+      key: 'reviewedBy',
+      header: 'Reviewed by',
+      render: (k) => {
+        const decided = k.status === 'APPROVED' || k.status === 'REJECTED';
+        if (!decided) return <span className="text-xs text-slate-500">Awaiting review</span>;
+        if (!k.verifiedByName) return <span className="text-slate-500">—</span>;
+        return (
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 truncate text-slate-200">
+              <BadgeCheck
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  k.status === 'APPROVED' ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              />
+              {k.verifiedByName}
+            </p>
+            <p className="truncate text-xs text-slate-500">{fmtDate(k.verifiedAt)}</p>
+          </div>
+        );
+      },
+    },
     {
       key: 'actions',
       header: '',
@@ -206,9 +249,22 @@ export default function KycReviewPage() {
         {active && (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{active.fullName}</p>
-                <p className="truncate text-xs text-slate-400">{active.user?.email ?? '—'}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-bold !text-white ring-1 ring-white/20">
+                  {active.user?.id && avatarById[active.user.id] ? (
+                    <img
+                      src={avatarById[active.user.id]}
+                      alt={active.user?.name ?? active.fullName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    initials(active.user?.name ?? active.fullName)
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-white">{active.fullName}</p>
+                  <p className="truncate text-xs text-slate-400">{active.user?.email ?? '—'}</p>
+                </div>
               </div>
               <StatusBadge tone={STATUS_TONE[active.status] ?? 'gray'}>{humanize(active.status)}</StatusBadge>
             </div>
@@ -261,15 +317,34 @@ export default function KycReviewPage() {
               ))}
             </div>
 
-            {active.status === 'REJECTED' && active.rejectionReason && (
-              <p className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-300 ring-1 ring-rose-500/30">
-                Rejected: {active.rejectionReason}
-              </p>
+            {active.status === 'APPROVED' && (
+              <div className="flex items-start gap-2.5 rounded-xl bg-emerald-500/10 p-3 ring-1 ring-emerald-500/30">
+                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                <div className="min-w-0 text-sm">
+                  <p className="font-semibold text-emerald-200">
+                    Approved{active.verifiedByName ? ` by ${active.verifiedByName}` : ''}
+                  </p>
+                  {active.verifiedAt && (
+                    <p className="text-xs text-emerald-200/70">on {fmtDate(active.verifiedAt)}</p>
+                  )}
+                </div>
+              </div>
             )}
-            {active.verifiedByName && active.status !== 'PENDING' && (
-              <p className="text-xs text-slate-500">
-                Reviewed by {active.verifiedByName} on {fmtDate(active.verifiedAt)}
-              </p>
+
+            {active.status === 'REJECTED' && (
+              <div className="rounded-xl bg-rose-500/10 p-3 ring-1 ring-rose-500/30">
+                {active.rejectionReason && (
+                  <p className="text-sm text-rose-300">
+                    <span className="font-semibold">Rejected:</span> {active.rejectionReason}
+                  </p>
+                )}
+                {active.verifiedByName && (
+                  <p className="mt-1 text-xs text-rose-200/70">
+                    By {active.verifiedByName}
+                    {active.verifiedAt ? ` on ${fmtDate(active.verifiedAt)}` : ''}
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Reject reason form */}
