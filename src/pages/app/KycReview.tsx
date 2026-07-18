@@ -121,7 +121,7 @@ export default function KycReviewPage() {
       header: 'User',
       render: (k) => (
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold text-white ring-1 ring-white/20">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold !text-white ring-1 ring-white/20">
             {initials(k.user?.name ?? k.fullName)}
           </div>
           <div className="min-w-0">

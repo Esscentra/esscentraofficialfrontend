@@ -71,6 +71,15 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      {/* Same page, but the URL carries the user's name for a friendlier path. */}
+      <Route
+        path="/profile/:username"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/kyc"
         element={

@@ -73,7 +73,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               exit={{ opacity: 0, x: 24, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               className={cn(
-                'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-white/10',
+                'toast-card pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-white/10',
                 'bg-[#15101f]/90 p-4 shadow-xl shadow-black/40 backdrop-blur-xl',
               )}
               role="status"

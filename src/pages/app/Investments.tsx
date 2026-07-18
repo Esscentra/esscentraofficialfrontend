@@ -11,15 +11,16 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { RowButton } from '@/components/ui/RowButton';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { FileField } from '@/components/ui/FileField';
+import { FilePreviewModal } from '@/components/ui/FilePreviewModal';
 import { useToast } from '@/components/ui/Toast';
 import { getErrorMessage } from '@/lib/utils';
+import { downloadUrlAsFile } from '@/lib/download';
 import { listUsers } from '@/lib/adminApi';
 import {
   listInvestments,
   createInvestment,
   updateInvestment,
   deleteInvestment as apiDeleteInvestment,
-  downloadInvoice,
   type Investment,
 } from '@/lib/investmentApi';
 import type { User } from '@/types';
@@ -47,6 +48,7 @@ export default function InvestmentsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Investment | null>(null);
   const [busy, setBusy] = useState(false);
+  const [invoicePreview, setInvoicePreview] = useState<{ url: string; name?: string } | null>(null);
 
   /* ------------------------------- Load data ------------------------------- */
   useEffect(() => {
@@ -171,23 +173,22 @@ export default function InvestmentsPage() {
       render: (i) =>
         i.invoiceUrl ? (
           <span className="inline-flex items-center gap-1">
-            <a
-              href={i.invoiceUrl}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand-300 transition hover:bg-brand-500/10"
-              title="View invoice PDF"
-            >
-              <FileText className="h-3.5 w-3.5" /> View
-            </a>
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                void downloadInvoice(i.id, i.invoiceName || 'invoice.pdf').catch((err) =>
-                  toast.error('Download failed', getErrorMessage(err)),
-                );
+                setInvoicePreview({ url: i.invoiceUrl!, name: i.invoiceName });
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-brand-300 transition hover:bg-brand-500/10"
+              title="View invoice PDF"
+            >
+              <FileText className="h-3.5 w-3.5" /> View
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                void downloadUrlAsFile(i.invoiceUrl!, i.invoiceName || 'invoice.pdf');
               }}
               className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
               title="Download invoice PDF"
@@ -275,7 +276,7 @@ export default function InvestmentsPage() {
               name="investedAt"
               type="date"
               defaultValue={editing?.investedAt ? editing.investedAt.slice(0, 10) : ''}
-              className="[color-scheme:dark]"
+              className=""
             />
           </div>
           <Textarea
@@ -314,6 +315,20 @@ export default function InvestmentsPage() {
           </div>
         </form>
       </Modal>
+
+      <FilePreviewModal
+        open={!!invoicePreview}
+        onClose={() => setInvoicePreview(null)}
+        url={invoicePreview?.url}
+        title={invoicePreview?.name || 'Invoice'}
+        subtitle="Invoice preview"
+        kind="pdf"
+        onDownload={
+          invoicePreview
+            ? () => void downloadUrlAsFile(invoicePreview.url, invoicePreview.name || 'invoice.pdf')
+            : undefined
+        }
+      />
     </div>
   );
 }

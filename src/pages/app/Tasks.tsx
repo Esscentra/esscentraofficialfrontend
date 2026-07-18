@@ -148,7 +148,7 @@ export default function TasksPage() {
             name="dueDate"
             type="date"
             defaultValue={editing?.dueDate?.slice(0, 10)}
-            className="!pl-4 [color-scheme:dark]"
+            className="!pl-4"
           />
           <Textarea label="Description" name="description" defaultValue={editing?.description} />
           <div className="flex justify-end gap-3 pt-2">

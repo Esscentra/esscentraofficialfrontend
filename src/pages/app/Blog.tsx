@@ -32,8 +32,14 @@ export default function BlogPage() {
     // FormData as multipart/form-data (don't JSON-stringify it):
     //   await api.post('/blog', f, { headers: { 'Content-Type': undefined } })
     const imageFile = f.get('featuredImage') as File | null;
-    const previewUrl =
-      imageFile && imageFile.size > 0 ? URL.createObjectURL(imageFile) : editing?.featuredImage;
+    const hasNewImage = !!imageFile && imageFile.size > 0;
+    // Replacing an image? Release the previous blob URL so it doesn't orphan.
+    if (hasNewImage && editing?.featuredImage?.startsWith('blob:')) {
+      URL.revokeObjectURL(editing.featuredImage);
+    }
+    const previewUrl = hasNewImage
+      ? URL.createObjectURL(imageFile as File)
+      : editing?.featuredImage;
 
     const data = {
       title: String(f.get('title') ?? ''),
@@ -62,6 +68,8 @@ export default function BlogPage() {
 
   const remove = (id: string) => {
     // TODO (delete): DELETE /blog/:id
+    const post = items.find((it) => it.id === id);
+    if (post?.featuredImage?.startsWith('blob:')) URL.revokeObjectURL(post.featuredImage);
     setItems((prev) => prev.filter((it) => it.id !== id));
     toast.info('Post deleted');
   };

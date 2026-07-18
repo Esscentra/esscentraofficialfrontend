@@ -21,9 +21,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <select ref={ref} className={cn('glass-input !pl-4 [color-scheme:dark]', className)} {...props}>
+      <select ref={ref} className={cn('glass-input select-field !pl-4', className)} {...props}>
         {options.map((o) => (
-          <option key={o.value} value={o.value} className="bg-[#0f1830]">
+          <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}

@@ -125,7 +125,7 @@ export default function ResetPassword() {
           error={errors.confirmPassword?.message}
           {...register('confirmPassword')}
         />
-        <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
+        <Button style={{color:'white'}} type="submit" size="lg" fullWidth loading={isSubmitting}>
           Update password
         </Button>
       </form>

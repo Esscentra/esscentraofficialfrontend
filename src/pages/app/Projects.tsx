@@ -142,14 +142,14 @@ export default function ProjectsPage() {
               name="startDate"
               type="date"
               defaultValue={editing?.startDate?.slice(0, 10)}
-              className="!pl-4 [color-scheme:dark]"
+              className="!pl-4"
             />
             <Input
               label="End date"
               name="endDate"
               type="date"
               defaultValue={editing?.endDate?.slice(0, 10)}
-              className="!pl-4 [color-scheme:dark]"
+              className="!pl-4"
             />
           </div>
           <Textarea label="Description" name="description" defaultValue={editing?.description} />

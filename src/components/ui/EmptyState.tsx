@@ -14,11 +14,15 @@ export function EmptyState({
 }) {
   return (
     <div className="glass-card flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.04] text-slate-400 ring-1 ring-white/10">
-        <Icon className="h-6 w-6" />
+      <span className="relative grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-b from-brand-400/15 to-brand-700/5 text-brand-300 ring-1 ring-brand-400/20">
+        <span
+          className="pointer-events-none absolute -inset-3 rounded-[1.5rem] border border-dashed border-white/10"
+          aria-hidden
+        />
+        <Icon className="h-7 w-7" />
       </span>
-      <h3 className="text-base font-semibold text-white">{title}</h3>
-      {description && <p className="max-w-sm text-sm text-slate-400">{description}</p>}
+      <h3 className="mt-2 text-base font-semibold text-white">{title}</h3>
+      {description && <p className="max-w-sm text-sm leading-relaxed text-slate-400">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

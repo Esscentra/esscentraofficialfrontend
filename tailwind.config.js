@@ -5,21 +5,21 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#eef5ff',
-          100: '#d9e7ff',
-          200: '#bcd5ff',
-          300: '#8fbaff',
-          400: '#5b92fb',
-          500: '#2f6df0',
-          600: '#1d57db',
-          700: '#1a45b8',
-          800: '#1b3c93',
-          900: '#1b3674',
+          50: '#edf3ff',
+          100: '#d9e5ff',
+          200: '#b5ccff',
+          300: '#7ea6fe',
+          400: '#427dfd',
+          500: '#105bfd', // Esscentra logo blue
+          600: '#064ce2',
+          700: '#0c42b9',
+          800: '#1a3f91',
+          900: '#213a71',
         },
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        display: ['Sora', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"Lexend Deca"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['"Lexend Deca"', 'system-ui', '-apple-system', 'sans-serif'],
       },
       backgroundImage: {
         'grid-faint':
@@ -43,6 +43,10 @@ export default {
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
+        loader: {
+          '0%': { transform: 'translateX(-120%)' },
+          '100%': { transform: 'translateX(320%)' },
+        },
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-6px)' },
@@ -53,6 +57,7 @@ export default {
         'aurora-2': 'aurora-2 22s ease-in-out infinite',
         'aurora-3': 'aurora-3 26s ease-in-out infinite',
         shimmer: 'shimmer 2s infinite',
+        loader: 'loader 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite',
         float: 'float 5s ease-in-out infinite',
       },
     },

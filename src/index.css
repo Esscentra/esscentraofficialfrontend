@@ -19,8 +19,19 @@
   }
 
   body {
+    /* Lexend Deca — HubSpot's brand typeface: a rounded, highly legible
+       humanist sans tuned for reading proficiency across dense UI. */
     @apply bg-[#070c1a] font-sans text-slate-200 antialiased;
-    letter-spacing: -0.011em;
+    letter-spacing: -0.006em;
+    text-rendering: optimizeLegibility;
+    font-optical-sizing: auto;
+  }
+
+  /* Numeric contexts (KPIs, money columns, tables) get lining tabular figures
+     so digits align cleanly in columns and totals. */
+  .tabular-nums,
+  table {
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
   }
 
   /* Custom scrollbar */
@@ -30,23 +41,53 @@
   }
   ::-webkit-scrollbar-thumb {
     @apply rounded-full bg-white/10;
+    border: 2px solid transparent;
+    background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-white/20;
+    background-clip: padding-box;
   }
 
-  /* Autofill: keep the dark glass look */
+  ::selection {
+    background: rgba(16, 91, 253, 0.35);
+    color: #fff;
+  }
+
+  /* Autofill: keep the dark glass look (dark theme default) */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
     -webkit-text-fill-color: #e2e8f0;
+    caret-color: #e2e8f0;
     transition: background-color 9999s ease-in-out 0s;
+  }
+  /* Light/reading: autofilled text must be dark so it's readable on the field. */
+  html[data-theme='light'] input:-webkit-autofill,
+  html[data-theme='light'] input:-webkit-autofill:hover,
+  html[data-theme='light'] input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a;
+    caret-color: #0f172a;
+  }
+  html[data-theme='reading'] input:-webkit-autofill,
+  html[data-theme='reading'] input:-webkit-autofill:hover,
+  html[data-theme='reading'] input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #3b2f1e;
+    caret-color: #3b2f1e;
   }
 }
 
 @layer components {
+  /* ------------------------------------------------------------------ */
+  /*  Card system — softer radius, layered elevation, crisp hairlines    */
+  /* ------------------------------------------------------------------ */
   .glass-card {
-    @apply relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_-20px_rgba(8,12,30,0.85),0_8px_40px_-16px_rgba(29,87,219,0.45)] backdrop-blur-2xl;
+    @apply relative overflow-hidden rounded-[1.25rem] border border-white/[0.08] bg-white/[0.04] backdrop-blur-2xl;
+    box-shadow:
+      0 1px 1px rgba(2, 6, 18, 0.4),
+      0 16px 40px -16px rgba(2, 6, 18, 0.7),
+      0 8px 32px -12px rgba(6, 76, 226, 0.25);
+    transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease;
   }
   /* premium gradient hairline along the top edge */
   .glass-card::before {
@@ -54,18 +95,61 @@
     @apply pointer-events-none absolute inset-x-0 top-0 h-px;
     background: linear-gradient(
       90deg,
-      transparent,
-      rgba(143, 186, 255, 0.6),
-      rgba(255, 255, 255, 0.85),
-      rgba(143, 186, 255, 0.6),
-      transparent
+      transparent 8%,
+      rgba(126, 166, 254, 0.45),
+      rgba(255, 255, 255, 0.7),
+      rgba(126, 166, 254, 0.45),
+      transparent 92%
     );
   }
   /* soft inner sheen */
   .glass-card::after {
     content: '';
-    @apply pointer-events-none absolute inset-0 rounded-[1.75rem];
-    background: radial-gradient(120% 80% at 50% -10%, rgba(91, 146, 251, 0.12), transparent 60%);
+    @apply pointer-events-none absolute inset-0 rounded-[1.25rem];
+    background: radial-gradient(120% 80% at 50% -10%, rgba(66, 125, 253, 0.1), transparent 60%);
+  }
+
+  /* Interactive cards lift gently */
+  .card-lift {
+    @apply transition-all duration-200;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* App chrome (sidebar / topbar) — themed frosted surface */
+  .app-bar {
+    background-color: rgba(6, 10, 23, 0.82);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+
+  /* Sidebar navigation states */
+  .nav-item {
+    @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150;
+  }
+  .nav-idle {
+    @apply text-slate-400 hover:bg-white/[0.06] hover:text-white;
+  }
+  .nav-active {
+    color: #fff;
+    background: linear-gradient(90deg, rgba(16, 91, 253, 0.28), rgba(16, 91, 253, 0.1) 70%, transparent);
+    box-shadow: inset 0 0 0 1px rgba(66, 125, 253, 0.22);
+  }
+  .nav-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 1.25rem;
+    width: 3px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #7ea6fe, #105bfd);
+    box-shadow: 0 0 12px rgba(66, 125, 253, 0.8);
+  }
+  .nav-section {
+    @apply px-3 pb-1.5 pt-5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500;
   }
 
   .glass-input {
@@ -75,7 +159,31 @@
     @apply border-white/20;
   }
   .glass-input:focus {
-    @apply border-brand-400/70 bg-white/[0.06] ring-4 ring-brand-500/20 shadow-[0_0_0_1px_rgba(47,109,240,0.35),0_8px_24px_-8px_rgba(29,87,219,0.6)];
+    @apply border-brand-400/70 bg-white/[0.06] ring-4 ring-brand-500/20 shadow-[0_0_0_1px_rgba(16,91,253,0.35),0_8px_24px_-8px_rgba(6,76,226,0.6)];
+  }
+
+  /* Native <select>: follow the active theme so the popup + arrow render
+     correctly, and paint each <option> with a readable, theme-matched pair. */
+  .select-field {
+    color-scheme: dark;
+  }
+  .select-field option {
+    background-color: #0f1830;
+    color: #e2e8f0;
+  }
+  html[data-theme='light'] .select-field {
+    color-scheme: light;
+  }
+  html[data-theme='light'] .select-field option {
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+  html[data-theme='reading'] .select-field {
+    color-scheme: light;
+  }
+  html[data-theme='reading'] .select-field option {
+    background-color: #fcf6e9;
+    color: #3b2f1e;
   }
 
   .text-gradient {
@@ -83,7 +191,33 @@
   }
 
   .font-display {
-    font-family: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-family: 'Lexend Deca', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Page entrance — content glides up as routes change */
+  .page-enter {
+    animation: page-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Skeleton shimmer for loading surfaces */
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-white/[0.06];
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    animation: shimmer 1.6s infinite;
   }
 }
 
@@ -106,8 +240,8 @@
 
 /* ===========================  LIGHT  ====================================== */
 html[data-theme='light'] body {
-  background: #eef2fa;
-  color: #334155;
+  background: #f2f5fb;
+  color: #3c4657;
 }
 
 /* Backdrop: hide the dark blobs, paint a soft, layered brand glow instead. */
@@ -116,43 +250,77 @@ html[data-theme='light'] .aurora-bg [class*='animate-aurora'] {
 }
 html[data-theme='light'] .aurora-bg {
   background:
-    radial-gradient(55rem 38rem at 12% -12%, rgba(47, 109, 240, 0.12), transparent 60%),
-    radial-gradient(48rem 36rem at 102% 2%, rgba(99, 102, 241, 0.1), transparent 55%),
-    radial-gradient(60rem 46rem at 50% 118%, rgba(56, 189, 248, 0.1), transparent 60%),
-    linear-gradient(180deg, #eef3fb, #e7edf7) !important;
+    radial-gradient(48rem 32rem at 8% -18%, rgba(16, 91, 253, 0.045), transparent 62%),
+    radial-gradient(42rem 30rem at 104% -6%, rgba(99, 102, 241, 0.035), transparent 58%),
+    linear-gradient(180deg, #f6f8fc, #eef1f7) !important;
 }
 /* Faint grid becomes a subtle dark hairline texture. */
 html[data-theme='light'] .bg-grid-faint {
   background-image:
-    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px) !important;
+    linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px) !important;
+}
+
+/* Kill the dark vignette + grain in light/reading — no blackish shadow. */
+html[data-theme='light'] .aurora-vignette,
+html[data-theme='reading'] .aurora-vignette,
+html[data-theme='light'] .aurora-noise,
+html[data-theme='reading'] .aurora-noise {
+  display: none !important;
 }
 
 /* Frosted bars (sidebar / topbar / sticky headers). */
+html[data-theme='light'] .app-bar,
 html[data-theme='light'] [class*='#070c1a'] {
-  background-color: rgba(255, 255, 255, 0.72) !important;
+  background-color: rgba(255, 255, 255, 0.82) !important;
 }
 
 /* Cards — crisp white with layered, soft shadows for depth. */
 html[data-theme='light'] .glass-card {
-  border-color: rgba(15, 23, 42, 0.07);
+  border-color: rgba(13, 27, 62, 0.08);
   background: #ffffff;
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 10px 24px -12px rgba(15, 23, 42, 0.14),
-    0 30px 60px -30px rgba(29, 87, 219, 0.22);
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 12px -4px rgba(16, 24, 40, 0.06),
+    0 18px 40px -24px rgba(16, 24, 40, 0.1);
 }
 html[data-theme='light'] .glass-card::before {
-  background: linear-gradient(90deg, transparent, rgba(47, 109, 240, 0.55), transparent);
+  background: linear-gradient(90deg, transparent 8%, rgba(16, 91, 253, 0.4), transparent 92%);
 }
 html[data-theme='light'] .glass-card::after {
-  background: radial-gradient(120% 80% at 50% -10%, rgba(47, 109, 240, 0.05), transparent 60%);
+  background: radial-gradient(120% 80% at 50% -10%, rgba(16, 91, 253, 0.04), transparent 60%);
+}
+html[data-theme='light'] .glass-card:hover {
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 8px 20px -6px rgba(16, 24, 40, 0.09),
+    0 26px 52px -30px rgba(16, 24, 40, 0.14);
+}
+
+/* Sidebar navigation */
+html[data-theme='light'] .nav-idle {
+  color: #5b6677;
+}
+html[data-theme='light'] .nav-idle:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: #0b1220;
+}
+html[data-theme='light'] .nav-active {
+  color: #0c42b9;
+  background: linear-gradient(90deg, rgba(16, 91, 253, 0.12), rgba(16, 91, 253, 0.05) 70%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(16, 91, 253, 0.18);
+}
+html[data-theme='light'] .nav-active::before {
+  box-shadow: 0 0 10px rgba(16, 91, 253, 0.45);
+}
+html[data-theme='light'] .nav-section {
+  color: #8b95a6;
 }
 
 /* Inputs */
 html[data-theme='light'] .glass-input {
-  border-color: rgba(15, 23, 42, 0.12);
-  background: #ffffff;
+  border-color: rgba(13, 27, 62, 0.14);
+  background: #fbfcfe;
   color: #0f172a;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
 }
@@ -160,13 +328,14 @@ html[data-theme='light'] .glass-input::placeholder {
   color: #9aa6b8;
 }
 html[data-theme='light'] .glass-input:hover {
-  border-color: rgba(15, 23, 42, 0.22);
+  border-color: rgba(13, 27, 62, 0.24);
 }
 html[data-theme='light'] .glass-input:focus {
-  border-color: rgba(47, 109, 240, 0.7);
+  border-color: rgba(16, 91, 253, 0.7);
+  background: #ffffff;
   box-shadow:
-    0 0 0 1px rgba(47, 109, 240, 0.35),
-    0 8px 22px -10px rgba(29, 87, 219, 0.4);
+    0 0 0 1px rgba(16, 91, 253, 0.35),
+    0 8px 22px -10px rgba(6, 76, 226, 0.4);
 }
 
 /* Text hierarchy — strong, readable contrast. */
@@ -178,26 +347,39 @@ html[data-theme='light'] .text-slate-400 { color: #5b6677; }
 html[data-theme='light'] .text-slate-500 { color: #8b95a6; }
 
 /* White-alpha surfaces / borders / rings → cool, subtle slate tints. */
-html[data-theme='light'] [class*='bg-white/'] { background-color: rgba(31, 41, 55, 0.035); }
-html[data-theme='light'] [class*='hover:bg-white/']:hover { background-color: rgba(31, 41, 55, 0.07); }
-html[data-theme='light'] [class*='border-white/'] { border-color: rgba(15, 23, 42, 0.09); }
-html[data-theme='light'] [class*='ring-white/'] { --tw-ring-color: rgba(15, 23, 42, 0.1); }
+html[data-theme='light'] [class*='bg-white/'] { background-color: rgba(23, 37, 84, 0.04); }
+html[data-theme='light'] [class*='hover:bg-white/']:hover { background-color: rgba(23, 37, 84, 0.075); }
+html[data-theme='light'] [class*='border-white/'] { border-color: rgba(13, 27, 62, 0.09); }
+html[data-theme='light'] [class*='ring-white/'] { --tw-ring-color: rgba(13, 27, 62, 0.1); }
 
 /* Accent text → darkened so badges/links read on white. */
+html[data-theme='light'] [class*='text-emerald-2'],
 html[data-theme='light'] [class*='text-emerald-3'] { color: #047857; }
 html[data-theme='light'] [class*='text-sky-3'] { color: #0369a1; }
 html[data-theme='light'] [class*='text-amber-3'] { color: #b45309; }
 html[data-theme='light'] [class*='text-rose-3'] { color: #be123c; }
 html[data-theme='light'] [class*='text-violet-3'] { color: #6d28d9; }
 html[data-theme='light'] [class*='text-brand-2'],
-html[data-theme='light'] [class*='text-brand-3'] { color: #1d57db; }
+html[data-theme='light'] [class*='text-brand-3'] { color: #064ce2; }
 
 html[data-theme='light'] .text-gradient {
-  background-image: linear-gradient(90deg, #16389b, #1d57db, #2f6df0);
+  background-image: linear-gradient(90deg, #123a90, #064ce2, #105bfd);
+}
+
+html[data-theme='light'] .skeleton {
+  background: rgba(15, 23, 42, 0.06);
+}
+html[data-theme='light'] .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
 }
 
 html[data-theme='light'] ::-webkit-scrollbar-thumb {
   background: rgba(15, 23, 42, 0.18);
+  background-clip: padding-box;
+}
+html[data-theme='light'] ::selection {
+  background: rgba(16, 91, 253, 0.2);
+  color: #0b1220;
 }
 
 /* ===========================  READING  ==================================== */
@@ -224,8 +406,9 @@ html[data-theme='reading'] .bg-grid-faint {
     linear-gradient(to bottom, rgba(91, 70, 40, 0.04) 1px, transparent 1px) !important;
 }
 
+html[data-theme='reading'] .app-bar,
 html[data-theme='reading'] [class*='#070c1a'] {
-  background-color: rgba(248, 241, 226, 0.78) !important;
+  background-color: rgba(248, 241, 226, 0.8) !important;
 }
 
 html[data-theme='reading'] .glass-card {
@@ -241,6 +424,26 @@ html[data-theme='reading'] .glass-card::before {
 }
 html[data-theme='reading'] .glass-card::after {
   background: radial-gradient(120% 80% at 50% -10%, rgba(180, 130, 70, 0.06), transparent 60%);
+}
+
+html[data-theme='reading'] .nav-idle {
+  color: #7a6647;
+}
+html[data-theme='reading'] .nav-idle:hover {
+  background: rgba(91, 70, 40, 0.08);
+  color: #2c2114;
+}
+html[data-theme='reading'] .nav-active {
+  color: #7a4d18;
+  background: linear-gradient(90deg, rgba(176, 127, 56, 0.16), rgba(176, 127, 56, 0.06) 70%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(176, 127, 56, 0.22);
+}
+html[data-theme='reading'] .nav-active::before {
+  background: linear-gradient(180deg, #d4af6e, #b67f28);
+  box-shadow: 0 0 10px rgba(176, 127, 56, 0.45);
+}
+html[data-theme='reading'] .nav-section {
+  color: #9a8763;
 }
 
 html[data-theme='reading'] .glass-input {
@@ -274,32 +477,67 @@ html[data-theme='reading'] [class*='hover:bg-white/']:hover { background-color: 
 html[data-theme='reading'] [class*='border-white/'] { border-color: rgba(120, 92, 52, 0.16); }
 html[data-theme='reading'] [class*='ring-white/'] { --tw-ring-color: rgba(120, 92, 52, 0.18); }
 
+html[data-theme='reading'] [class*='text-emerald-2'],
 html[data-theme='reading'] [class*='text-emerald-3'] { color: #2f7d52; }
 html[data-theme='reading'] [class*='text-sky-3'] { color: #1f6f99; }
 html[data-theme='reading'] [class*='text-amber-3'] { color: #a8651a; }
 html[data-theme='reading'] [class*='text-rose-3'] { color: #b03a4a; }
 html[data-theme='reading'] [class*='text-violet-3'] { color: #6d4aa8; }
 html[data-theme='reading'] [class*='text-brand-2'],
-html[data-theme='reading'] [class*='text-brand-3'] { color: #1d57db; }
+html[data-theme='reading'] [class*='text-brand-3'] { color: #064ce2; }
 
 html[data-theme='reading'] .text-gradient {
   background-image: linear-gradient(90deg, #7a4d18, #9a6620, #b67f28);
 }
 
+html[data-theme='reading'] .skeleton {
+  background: rgba(120, 92, 52, 0.1);
+}
+
 html[data-theme='reading'] ::-webkit-scrollbar-thumb {
   background: rgba(120, 92, 52, 0.25);
+  background-clip: padding-box;
 }
 
 /* Keep display headings in Sora even in reading mode (only body is serif). */
 html[data-theme='reading'] .font-display {
-  font-family: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Lexend Deca', system-ui, -apple-system, sans-serif;
+}
+
+/* ----------- Toasts stay a dark surface, so keep their text light --------- */
+html[data-theme='light'] .toast-card .text-slate-100,
+html[data-theme='reading'] .toast-card .text-slate-100 {
+  color: #f1f5f9;
+}
+html[data-theme='light'] .toast-card .text-slate-200,
+html[data-theme='reading'] .toast-card .text-slate-200 {
+  color: #e2e8f0;
+}
+html[data-theme='light'] .toast-card .text-slate-400,
+html[data-theme='reading'] .toast-card .text-slate-400 {
+  color: #9aa7bb;
+}
+html[data-theme='light'] .toast-card .text-slate-500,
+html[data-theme='reading'] .toast-card .text-slate-500 {
+  color: #7c8698;
+}
+html[data-theme='light'] .toast-card [class*='text-brand-3'],
+html[data-theme='reading'] .toast-card [class*='text-brand-3'] {
+  color: #8fb4ff;
+}
+html[data-theme='light'] .toast-card [class*='border-white/'],
+html[data-theme='reading'] .toast-card [class*='border-white/'] {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* ----------- Brand hero panel stays dark & vivid in every theme ----------- */
+.brand-panel {
+  position: relative;
+}
 html[data-theme='light'] .brand-panel,
 html[data-theme='reading'] .brand-panel {
   background-color: #0a1226 !important;
-  background-image: linear-gradient(135deg, rgba(29, 87, 219, 0.55), rgba(27, 60, 147, 0.45), #070c1a) !important;
+  background-image: linear-gradient(135deg, rgba(6, 76, 226, 0.55), rgba(27, 60, 147, 0.45), #070c1a) !important;
 }
 html[data-theme='light'] .brand-panel .text-white,
 html[data-theme='reading'] .brand-panel .text-white {
@@ -333,5 +571,76 @@ html[data-theme='reading'] .brand-panel [class*='border-white/'] {
 }
 html[data-theme='light'] .brand-panel .text-gradient,
 html[data-theme='reading'] .brand-panel .text-gradient {
-  background-image: linear-gradient(90deg, #ffffff, #d9e7ff, #8fbaff);
+  background-image: linear-gradient(90deg, #ffffff, #d9e7ff, #7ea6fe);
+}
+
+/* ----------- Hero banner (dashboard) — rich brand surface, all themes ----- */
+.hero-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(66, 125, 253, 0.25);
+  background:
+    radial-gradient(60rem 22rem at 85% -40%, rgba(66, 125, 253, 0.35), transparent 60%),
+    radial-gradient(40rem 18rem at -10% 120%, rgba(56, 189, 248, 0.18), transparent 55%),
+    linear-gradient(120deg, #101c3f 0%, #0c1530 45%, #070c1a 100%);
+  box-shadow:
+    0 24px 60px -24px rgba(6, 12, 32, 0.8),
+    0 12px 40px -16px rgba(6, 76, 226, 0.4);
+}
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(80% 100% at 80% 0%, black, transparent 75%);
+  mask-image: radial-gradient(80% 100% at 80% 0%, black, transparent 75%);
+}
+.hero-banner::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 5%, rgba(126, 166, 254, 0.6), rgba(255, 255, 255, 0.8), rgba(126, 166, 254, 0.6), transparent 95%);
+}
+html[data-theme='light'] .hero-banner {
+  box-shadow:
+    0 24px 60px -28px rgba(16, 24, 40, 0.45),
+    0 12px 40px -16px rgba(6, 76, 226, 0.35);
+}
+/* Text inside the hero always reads light-on-dark, in every theme */
+.hero-banner .text-white,
+html[data-theme='light'] .hero-banner .text-white,
+html[data-theme='reading'] .hero-banner .text-white {
+  color: #ffffff;
+}
+html[data-theme='light'] .hero-banner [class*='text-slate-3'],
+html[data-theme='reading'] .hero-banner [class*='text-slate-3'] {
+  color: rgba(255, 255, 255, 0.75);
+}
+html[data-theme='light'] .hero-banner [class*='text-slate-4'],
+html[data-theme='reading'] .hero-banner [class*='text-slate-4'] {
+  color: rgba(226, 236, 255, 0.65);
+}
+html[data-theme='light'] .hero-banner [class*='text-brand-2'],
+html[data-theme='reading'] .hero-banner [class*='text-brand-2'] {
+  color: #bcd5ff;
+}
+html[data-theme='light'] .hero-banner [class*='bg-white/'],
+html[data-theme='reading'] .hero-banner [class*='bg-white/'] {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+html[data-theme='light'] .hero-banner [class*='border-white/'],
+html[data-theme='reading'] .hero-banner [class*='border-white/'] {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+html[data-theme='light'] .hero-banner [class*='ring-white/'],
+html[data-theme='reading'] .hero-banner [class*='ring-white/'] {
+  --tw-ring-color: rgba(255, 255, 255, 0.18);
 }

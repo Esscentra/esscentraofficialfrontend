@@ -13,11 +13,11 @@ export function AuroraBackground() {
       {/* faint grid */}
       <div className="absolute inset-0 bg-grid-faint [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
 
-      {/* vignette */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#070c1a]" />
+      {/* vignette — fades content into the dark base (dark theme only) */}
+      <div className="aurora-vignette absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#070c1a]" />
 
       {/* subtle noise via SVG */}
-      <svg className="absolute inset-0 h-full w-full opacity-[0.035]">
+      <svg className="aurora-noise absolute inset-0 h-full w-full opacity-[0.035]">
         <filter id="noise">
           <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
         </filter>

@@ -82,13 +82,21 @@ export default function Dashboard() {
           <Link
             key={c.to}
             to={c.to}
-            className="glass-card group flex items-start gap-4 p-5 transition hover:-translate-y-0.5"
+            className="glass-card card-lift group flex items-start gap-4 p-5"
           >
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30 transition group-hover:bg-brand-500/25">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-400/25 to-brand-700/10 text-brand-300 ring-1 ring-brand-500/30 transition-colors duration-200 group-hover:from-brand-400/40 group-hover:to-brand-700/20 group-hover:text-brand-200">
               <c.icon className="h-5 w-5" />
             </span>
-            <div>
-              <h3 className="font-semibold text-white">{c.label}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="flex items-center gap-1.5 font-semibold text-white">
+                {c.label}
+                <span
+                  className="translate-x-0 text-brand-300 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100"
+                  aria-hidden
+                >
+                  →
+                </span>
+              </h3>
               <p className="mt-0.5 text-sm text-slate-400">{c.hint}</p>
             </div>
           </Link>

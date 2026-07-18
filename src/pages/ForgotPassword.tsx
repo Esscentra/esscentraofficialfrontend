@@ -89,7 +89,7 @@ export default function ForgotPassword() {
           error={errors.email?.message}
           {...register('email')}
         />
-        <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
+        <Button style={{color:'white'}} type="submit" size="lg" fullWidth loading={isSubmitting}>
           {!isSubmitting && <Send className="h-4 w-4" />} Send reset link
         </Button>
       </form>

@@ -29,10 +29,15 @@ export function CameraCapture({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // Monotonic token: bumped on every stop()/start() so a getUserMedia promise
+  // that resolves AFTER the modal was closed can detect it's stale and release
+  // the camera instead of leaving it running.
+  const tokenRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   const stop = useCallback(() => {
+    tokenRef.current++;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setReady(false);
@@ -44,18 +49,30 @@ export function CameraCapture({
       setError('Camera is not supported in this browser. Please upload an image instead.');
       return;
     }
+    const token = ++tokenRef.current;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode },
         audio: false,
       });
+      // Superseded while we awaited permission (modal closed / restarted): drop it.
+      if (token !== tokenRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
+      if (token !== tokenRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        return;
+      }
       setReady(true);
     } catch (e) {
+      if (token !== tokenRef.current) return; // closed before the error surfaced
       const name = (e as DOMException)?.name;
       setError(
         name === 'NotAllowedError'

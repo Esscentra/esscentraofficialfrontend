@@ -29,7 +29,7 @@ export function ThemeSwitcher() {
             aria-label={label}
             className={`grid h-7 w-7 place-items-center rounded-lg transition ${
               active
-                ? 'bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow ring-1 ring-inset ring-white/20'
+                ? 'bg-gradient-to-b from-brand-500 to-brand-600 !text-white shadow ring-1 ring-inset ring-white/20'
                 : 'text-slate-400 hover:bg-white/10 hover:text-white'
             }`}
           >

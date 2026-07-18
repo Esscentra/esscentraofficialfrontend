@@ -14,12 +14,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<Variant, string> = {
   primary:
-    'text-white bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 shadow-lg shadow-brand-600/35 hover:shadow-xl hover:shadow-brand-500/40 ring-1 ring-inset ring-white/15 focus-visible:ring-brand-400',
+    '!text-white bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 shadow-lg shadow-brand-600/35 hover:shadow-xl hover:shadow-brand-500/40 ring-1 ring-inset ring-white/15 focus-visible:ring-brand-400',
   secondary:
     'text-slate-100 bg-white/[0.06] border border-white/10 hover:bg-white/[0.1] hover:border-white/20 focus-visible:ring-white/30',
   ghost: 'text-slate-300 hover:bg-white/[0.06] hover:text-white focus-visible:ring-white/20',
   danger:
-    'text-white bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 shadow-lg shadow-rose-600/30 ring-1 ring-inset ring-white/15 focus-visible:ring-rose-400',
+    '!text-white bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 shadow-lg shadow-rose-600/30 ring-1 ring-inset ring-white/15 focus-visible:ring-rose-400',
 };
 
 const sizes: Record<Size, string> = {

@@ -314,7 +314,7 @@ export default function OpportunitiesPage() {
               name="expectedCloseDate"
               type="date"
               defaultValue={editing?.expectedCloseDate?.slice(0, 10)}
-              className="!pl-4 [color-scheme:dark]"
+              className="!pl-4"
             />
           </div>
 

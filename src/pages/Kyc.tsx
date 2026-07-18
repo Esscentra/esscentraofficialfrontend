@@ -9,7 +9,9 @@ import {
   BadgeCheck,
   Camera,
   Clock,
+  ExternalLink,
   FileCheck2,
+  ImageOff,
   ShieldCheck,
   Upload,
   XCircle,
@@ -184,7 +186,56 @@ function StatusCard({ record }: { record: KycRecord }) {
           value={`${DOC_TYPES.find((d) => d.value === record.documentType)?.label ?? record.documentType} • ${record.documentNumber}`}
         />
       </dl>
+
+      {(record.frontImageUrl || record.backImageUrl || record.selfieUrl) && (
+        <div className="mt-6 border-t border-white/10 pt-5">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Uploaded documents
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <DocThumb label="Front image" url={record.frontImageUrl} />
+            <DocThumb label="Back image" url={record.backImageUrl} />
+            <DocThumb label="Selfie" url={record.selfieUrl} />
+          </div>
+        </div>
+      )}
     </motion.div>
+  );
+}
+
+/** Clickable thumbnail for an uploaded KYC image; opens the full file in a new tab. */
+function DocThumb({ label, url }: { label: string; url?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      title={`Open ${label}`}
+      className="group relative block overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] transition hover:border-brand-400/50"
+    >
+      <div className="grid aspect-[4/3] place-items-center overflow-hidden bg-black/20">
+        {broken ? (
+          <span className="flex flex-col items-center gap-1 text-slate-500">
+            <ImageOff className="h-5 w-5" />
+            <span className="text-[10px]">Preview unavailable</span>
+          </span>
+        ) : (
+          <img
+            src={url}
+            alt={label}
+            loading="lazy"
+            onError={() => setBroken(true)}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          />
+        )}
+      </div>
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
+        <span className="truncate text-xs font-medium text-slate-200">{label}</span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400 transition group-hover:text-brand-300" />
+      </div>
+    </a>
   );
 }
 
@@ -264,7 +315,7 @@ function SubmitForm({
           </label>
           <input
             type="date"
-            className="glass-input !pl-4 [color-scheme:dark]"
+            className="glass-input !pl-4"
             {...register('dateOfBirth')}
           />
           {errors.dateOfBirth && (
@@ -276,9 +327,9 @@ function SubmitForm({
           <label className="block text-xs font-medium uppercase tracking-wide text-slate-400">
             Document type
           </label>
-          <select className="glass-input !pl-4 [color-scheme:dark]" {...register('documentType')}>
+          <select className="glass-input select-field !pl-4" {...register('documentType')}>
             {DOC_TYPES.map((d) => (
-              <option key={d.value} value={d.value} className="bg-[#0f1830]">
+              <option key={d.value} value={d.value}>
                 {d.label}
               </option>
             ))}

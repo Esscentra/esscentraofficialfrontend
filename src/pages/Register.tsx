@@ -179,7 +179,7 @@ export default function Register() {
         </label>
         {errors.acceptTerms && <p className="-mt-3 text-xs text-rose-400">{errors.acceptTerms.message}</p>}
 
-        <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
+        <Button style={{color:'white'}} type="submit" size="lg" fullWidth loading={isSubmitting}>
           {!isSubmitting && <UserPlus className="h-4 w-4" />} Create account
         </Button>
       </form>

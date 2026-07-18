@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
@@ -46,6 +46,10 @@ export default function Profile() {
 
   // user is guaranteed by ProtectedRoute
   const u = user!;
+
+  useEffect(() => {
+    document.title = `${u.name} — Profile · Esscentra`;
+  }, [u.name]);
 
   const onLogout = async () => {
     setLoggingOut(true);
@@ -113,7 +117,9 @@ export default function Profile() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="relative flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition"
+              className={`relative flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                tab === t.id ? '!text-white' : 'text-slate-300 hover:text-white'
+              }`}
             >
               {tab === t.id && (
                 <motion.span
@@ -224,7 +230,7 @@ function ProfileHeader({
       className="glass-card flex flex-col items-center gap-5 p-6 sm:flex-row sm:items-center sm:gap-6 sm:p-8"
     >
       <div className="relative">
-        <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-3xl bg-gradient-to-br from-brand-400 to-brand-700 text-2xl font-bold text-white shadow-lg shadow-brand-900/40 ring-1 ring-white/20">
+        <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-3xl bg-gradient-to-br from-brand-400 to-brand-700 text-2xl font-bold !text-white shadow-lg shadow-brand-900/40 ring-1 ring-white/20">
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
           ) : (
@@ -233,8 +239,9 @@ function ProfileHeader({
         </div>
         <button
           onClick={onPickPhoto}
-          className="absolute -bottom-1.5 -right-1.5 grid h-9 w-9 place-items-center rounded-xl border border-white/20 bg-[#15101f] text-slate-200 shadow-lg transition hover:bg-brand-600 hover:text-white"
+          className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full bg-gradient-to-b from-brand-500 to-brand-600 !text-white shadow-lg shadow-brand-900/30 ring-2 ring-white/90 transition duration-150 hover:-translate-y-0.5 hover:from-brand-400 hover:to-brand-500 hover:shadow-xl hover:shadow-brand-500/40 active:translate-y-0 active:scale-95"
           aria-label="Change photo"
+          title="Change photo"
         >
           <Camera className="h-4 w-4" />
         </button>

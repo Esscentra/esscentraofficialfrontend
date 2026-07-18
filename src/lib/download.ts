@@ -34,3 +34,41 @@ export async function downloadFromApi(path: string, fallbackName = 'download'): 
   // Revoke a moment later so the download has time to start.
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
+
+/**
+ * Fetch a public (e.g. Cloudinary) file directly and return an object URL whose
+ * MIME type is forced — Cloudinary `raw` uploads are served as
+ * `application/octet-stream`, so a browser won't preview them. Re-wrapping the
+ * bytes as `application/pdf` makes the file previewable in an <iframe>.
+ * Caller must URL.revokeObjectURL() the result when done.
+ */
+export async function fetchAsObjectUrl(url: string, mime = 'application/pdf'): Promise<string> {
+  const res = await fetch(url, { mode: 'cors' });
+  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+  const buf = await res.arrayBuffer();
+  return URL.createObjectURL(new Blob([buf], { type: mime }));
+}
+
+/**
+ * Download a public file URL as a properly-typed, properly-named file. Fetches
+ * the bytes, coerces the MIME type, and saves with `filename`. Falls back to
+ * opening the URL in a new tab if the fetch is blocked (e.g. CORS).
+ */
+export async function downloadUrlAsFile(
+  url: string,
+  filename: string,
+  mime = 'application/pdf',
+): Promise<void> {
+  try {
+    const objectUrl = await fetchAsObjectUrl(url, mime);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
+}

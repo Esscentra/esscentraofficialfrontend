@@ -15,15 +15,13 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
-import { LoadingCard } from '@/components/ui/LoadingCard';
+import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FilePreviewModal } from '@/components/ui/FilePreviewModal';
 import { useAuth } from '@/context/AuthContext';
 import { getDashboardStats, type DashboardStats } from '@/lib/dashboardApi';
-import {
-  listMyInvestments,
-  downloadInvoice,
-  type MyInvestments,
-} from '@/lib/investmentApi';
+import { listMyInvestments, type MyInvestments } from '@/lib/investmentApi';
+import { downloadUrlAsFile } from '@/lib/download';
 import {
   listMyCommitments,
   downloadExpenseAttachment,
@@ -62,10 +60,10 @@ function niceCeil(max: number): number {
 // Ordinal blue ramp (light→dark) for pipeline stages, chosen for the dark
 // surface; single hue = magnitude, per the data-viz color rules.
 const STAGE_RAMP: Record<string, string> = {
-  NEW: '#86b6ef',
-  QUALIFIED: '#5598e7',
-  PROPOSAL: '#3987e5',
-  NEGOTIATION: '#256abf',
+  NEW: '#93b4ff',
+  QUALIFIED: '#5e8dfd',
+  PROPOSAL: '#2f6cfb',
+  NEGOTIATION: '#1348c9',
 };
 const STAGE_LABEL: Record<string, string> = {
   NEW: 'New',
@@ -89,7 +87,7 @@ const PROJECT_LABEL: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
-const SERIES_BLUE = '#3987e5';
+const SERIES_BLUE = '#3f7bfd';
 
 /* -------------------------------- page -------------------------------- */
 
@@ -101,6 +99,9 @@ export default function InvestorDashboard() {
   const [myInv, setMyInv] = useState<MyInvestments | null>(null);
   const [myCommitments, setMyCommitments] = useState<Commitment[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [invoicePreview, setInvoicePreview] = useState<
+    { url: string; id: string; name?: string } | null
+  >(null);
 
   useEffect(() => {
     let active = true;
@@ -145,17 +146,7 @@ export default function InvestorDashboard() {
   }
 
   if (!stats) {
-    return (
-      <div>
-        <PageHeader eyebrow="Investor overview" title="Business performance" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <LoadingCard />
-          <LoadingCard />
-          <LoadingCard />
-          <LoadingCard />
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const t = stats.totals;
@@ -168,26 +159,37 @@ export default function InvestorDashboard() {
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Investor overview"
-        title={`Welcome, ${firstName}`}
-        subtitle="Aggregated business performance — pipeline, revenue and delivery. Read-only view."
-      />
-
-      {/* Hero figure: the one number this view leads with */}
-      <div className="glass-card mb-4 p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          Open pipeline value
-        </p>
-        <p
-          className="mt-2 font-display text-5xl font-bold leading-none tracking-tight text-white"
-          title={fmtFull(t.pipelineValue)}
-        >
-          {fmt(t.pipelineValue)}
-        </p>
-        <p className="mt-2 text-sm text-slate-400">
-          across {t.pipelineCount} open {t.pipelineCount === 1 ? 'deal' : 'deals'}
-        </p>
+      {/* Hero banner — greeting + the one number this view leads with */}
+      <div className="hero-banner mb-6 p-6 sm:p-8">
+        <div className="relative flex flex-wrap items-end justify-between gap-6">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-200">
+              <span className="h-px w-6 bg-gradient-to-r from-brand-300 to-transparent" aria-hidden />
+              Investor overview
+            </p>
+            <h1 className="mt-2.5 font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-[2.1rem]">
+              Welcome, {firstName}
+            </h1>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-400">
+              Aggregated business performance — pipeline, revenue and delivery. Read-only view.
+            </p>
+          </div>
+          <div className="shrink-0 sm:text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Open pipeline value
+            </p>
+            <p
+              className="mt-2 font-display text-5xl font-bold leading-none tracking-tight text-white tabular-nums"
+              title={fmtFull(t.pipelineValue)}
+            >
+              {fmt(t.pipelineValue)}
+            </p>
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-300" aria-hidden />
+              {t.pipelineCount} open {t.pipelineCount === 1 ? 'deal' : 'deals'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Your commitments — pledge progress + how the funds were used */}
@@ -220,29 +222,46 @@ export default function InvestorDashboard() {
                 </div>
 
                 {/* Committed / received / remaining / spent / balance */}
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
                   {[
-                    { label: 'Committed', value: fmt(c.committedAmount) },
+                    { label: 'Committed', value: fmt(c.committedAmount), accent: true },
                     { label: 'Paid so far', value: fmt(c.receivedTotal) },
                     { label: 'Remaining', value: fmt(c.remainingToReceive) },
                     { label: 'Spent', value: fmt(c.spentTotal) },
                     { label: 'Balance', value: fmt(c.balanceAvailable) },
                   ].map((s) => (
-                    <div key={s.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                      <p className="text-sm font-bold text-white tabular-nums">{s.value}</p>
-                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    <div
+                      key={s.label}
+                      className={`rounded-xl border p-3 transition-colors ${
+                        s.accent
+                          ? 'border-brand-400/25 bg-brand-500/[0.08]'
+                          : 'border-white/[0.07] bg-white/[0.03] hover:border-white/[0.14]'
+                      }`}
+                    >
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                         {s.label}
+                      </p>
+                      <p className="font-display text-base font-bold leading-none text-white tabular-nums">
+                        {s.value}
                       </p>
                     </div>
                   ))}
                 </div>
 
                 {/* Funding progress meter */}
-                <div className="mt-4 h-2.5 w-full rounded-full bg-brand-500/15">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600"
-                    style={{ width: `${pct}%` }}
-                  />
+                <div className="mt-5">
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold">
+                    <span className="uppercase tracking-[0.12em] text-slate-500">Funding progress</span>
+                    <span className="tabular-nums text-slate-400">
+                      {fmt(c.receivedTotal)} of {fmt(c.committedAmount)}
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-brand-500/15 ring-1 ring-inset ring-white/[0.06]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600 shadow-[0_0_12px_rgba(91,146,251,0.6)] transition-[width] duration-700"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </div>
 
                 {/* How the funds were used */}
@@ -339,7 +358,10 @@ export default function InvestorDashboard() {
         {myInv && myInv.items.length > 0 && (
           <ul className="mt-4 divide-y divide-white/5 border-t border-white/10">
             {myInv.items.map((inv) => (
-              <li key={inv.id} className="flex flex-wrap items-center gap-3 py-3">
+              <li key={inv.id} className="group flex flex-wrap items-center gap-3 py-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-400/20">
+                  <Receipt className="h-3.5 w-3.5" />
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-white tabular-nums">{fmtFull(inv.amount)}</p>
                   <p className="truncate text-xs text-slate-500">
@@ -355,18 +377,26 @@ export default function InvestorDashboard() {
                 </div>
                 {inv.invoiceUrl ? (
                   <span className="flex items-center gap-2">
-                    <a
-                      href={inv.invoiceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08]"
-                    >
-                      <FileText className="h-3.5 w-3.5" /> View invoice
-                    </a>
                     <button
                       type="button"
                       onClick={() =>
-                        void downloadInvoice(inv.id, inv.invoiceName || 'invoice.pdf').catch(() => {})
+                        setInvoicePreview({
+                          url: inv.invoiceUrl!,
+                          id: inv.id,
+                          name: inv.invoiceName,
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08]"
+                    >
+                      <FileText className="h-3.5 w-3.5" /> View invoice
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void downloadUrlAsFile(
+                          inv.invoiceUrl!,
+                          inv.invoiceName || 'invoice.pdf',
+                        )
                       }
                       className="inline-flex items-center gap-1.5 rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-200 transition hover:bg-brand-500/20"
                     >
@@ -622,6 +652,20 @@ export default function InvestorDashboard() {
           </p>
         </div>
       </div>
+
+      <FilePreviewModal
+        open={!!invoicePreview}
+        onClose={() => setInvoicePreview(null)}
+        url={invoicePreview?.url}
+        title={invoicePreview?.name || 'Invoice'}
+        subtitle="Invoice preview"
+        kind="pdf"
+        onDownload={
+          invoicePreview
+            ? () => void downloadUrlAsFile(invoicePreview.url, invoicePreview.name || 'invoice.pdf')
+            : undefined
+        }
+      />
     </div>
   );
 }

@@ -83,7 +83,7 @@ export default function Login() {
               />
               Remember me
             </label>
-            <AuthLink to="/forgot-password">Forgot password?</AuthLink>
+            <AuthLink  to="/forgot-password">Forgot password?</AuthLink>
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export default function Login() {
           </motion.div>
         )}
 
-        <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
+        <Button style={{color:'white'}} type="submit" size="lg" fullWidth loading={isSubmitting}>
           {!isSubmitting && <LogIn className="h-4 w-4" />} Sign in
         </Button>
       </form>

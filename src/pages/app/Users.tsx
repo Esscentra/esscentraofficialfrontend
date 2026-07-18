@@ -149,7 +149,7 @@ export default function UsersPage() {
       header: 'User',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold text-white ring-1 ring-white/20">
+          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold !text-white ring-1 ring-white/20">
             {u.avatarUrl ? (
               <img src={u.avatarUrl} alt={u.name} className="h-full w-full object-cover" />
             ) : (
@@ -280,7 +280,7 @@ export default function UsersPage() {
         {editing && (
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-3 ring-1 ring-white/10">
-              <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-bold text-white ring-1 ring-white/20">
+              <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-bold !text-white ring-1 ring-white/20">
                 {editing.avatarUrl ? (
                   <img src={editing.avatarUrl} alt={editing.name} className="h-full w-full object-cover" />
                 ) : (

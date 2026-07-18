@@ -420,7 +420,7 @@ export default function CommitmentsPage() {
               name="startDate"
               type="date"
               defaultValue={editing?.startDate ? editing.startDate.slice(0, 10) : ''}
-              className="[color-scheme:dark]"
+              className=""
             />
           </div>
           {editing && (
@@ -513,7 +513,7 @@ export default function CommitmentsPage() {
                 >
                   <div className="grid grid-cols-2 gap-3">
                     <Input label="Amount (₹)" name="amount" type="number" min="1" step="any" required placeholder="15000" />
-                    <Input label="Date" name="investedAt" type="date" className="[color-scheme:dark]" />
+                    <Input label="Date" name="investedAt" type="date" className="" />
                   </div>
                   <Input label="Notes" name="notes" placeholder="First installment" />
                   <FileField
@@ -595,7 +595,7 @@ export default function CommitmentsPage() {
                 >
                   <div className="grid grid-cols-2 gap-3">
                     <Input label="Amount (₹)" name="amount" type="number" min="1" step="any" required placeholder="5000" />
-                    <Input label="Date" name="spentAt" type="date" className="[color-scheme:dark]" />
+                    <Input label="Date" name="spentAt" type="date" className="" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Input label="Category" name="category" placeholder="Marketing / Salaries / Tools…" />
