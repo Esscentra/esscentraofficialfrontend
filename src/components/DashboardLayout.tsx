@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { AuroraBackground } from './AuroraBackground';
+import { NotificationBell } from './NotificationBell';
 import { Logo } from './Logo';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
@@ -201,6 +202,7 @@ export function DashboardLayout() {
           </button>
 
           <div className="ml-auto flex items-center gap-3">
+            <NotificationBell />
             <ThemeSwitcher />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-white">{user?.name}</p>

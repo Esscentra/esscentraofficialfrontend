@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
+  BellRing,
+  CalendarClock,
   Download,
   FileText,
   HandCoins,
@@ -34,6 +36,7 @@ import {
   deleteExpense as apiDeleteExpense,
   downloadCommitmentInvoice,
   downloadExpenseAttachment,
+  runDueReminders,
   type Commitment,
   type CommitmentStatus,
 } from '@/lib/commitmentApi';
@@ -60,6 +63,28 @@ function fmtDate(iso?: string): string {
   });
 }
 
+function fmtDueDate(iso?: string): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function dueTone(iso?: string): Tone {
+  if (!iso) return 'gray';
+  const today = new Date();
+  const days = Math.ceil(
+    (new Date(iso).getTime() - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) /
+      86_400_000,
+  );
+  if (days <= 0) return 'red';
+  if (days <= 5) return 'amber';
+  return 'blue';
+}
+
 /** Thin progress meter: fill + lighter track of the same hue. */
 function Meter({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -71,6 +96,12 @@ function Meter({ value, max }: { value: number; max: number }) {
       />
     </div>
   );
+}
+
+function readDueDay(form: FormData): number | null {
+  const raw = String(form.get('dueDay') ?? '').trim();
+  if (!raw) return null;
+  return Number(raw);
 }
 
 export default function CommitmentsPage() {
@@ -88,6 +119,7 @@ export default function CommitmentsPage() {
   const [detail, setDetail] = useState<Commitment | null>(null);
   const [showPayForm, setShowPayForm] = useState(false);
   const [showExpForm, setShowExpForm] = useState(false);
+  const [runningDue, setRunningDue] = useState(false);
 
   /* ------------------------------- Load data ------------------------------- */
   const reloadList = useCallback(() => {
@@ -157,6 +189,8 @@ export default function CommitmentsPage() {
           startDate: String(f.get('startDate') ?? ''),
           notes: String(f.get('notes') ?? ''),
           status: String(f.get('status') ?? 'ACTIVE') as CommitmentStatus,
+          dueDay: readDueDay(f),
+          dueReminderEnabled: String(f.get('dueReminderEnabled') ?? 'true') === 'true',
         });
         toast.success('Commitment updated');
       } else {
@@ -166,6 +200,8 @@ export default function CommitmentsPage() {
           committedAmount: Number(f.get('committedAmount') ?? 0),
           startDate: String(f.get('startDate') ?? ''),
           notes: String(f.get('notes') ?? ''),
+          dueDay: readDueDay(f),
+          dueReminderEnabled: String(f.get('dueReminderEnabled') ?? 'true') === 'true',
         });
         toast.success('Commitment created', 'Now record installments as the money arrives.');
       }
@@ -175,6 +211,22 @@ export default function CommitmentsPage() {
       toast.error('Could not save', getErrorMessage(err));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onRunDueReminders = async () => {
+    setRunningDue(true);
+    try {
+      const result = await runDueReminders();
+      toast.success(
+        'Due reminders processed',
+        `${result.notified} investor ${result.notified === 1 ? 'notification' : 'notifications'} sent from ${result.checked} due ${result.checked === 1 ? 'commitment' : 'commitments'}.`,
+      );
+      reloadList();
+    } catch (err) {
+      toast.error('Could not run reminders', getErrorMessage(err));
+    } finally {
+      setRunningDue(false);
     }
   };
 
@@ -303,6 +355,21 @@ export default function CommitmentsPage() {
       ),
     },
     {
+      key: 'nextDue',
+      header: 'Next due',
+      render: (c) =>
+        c.dueDay && c.nextDueDate && c.status === 'ACTIVE' ? (
+          <div className="min-w-[110px]">
+            <StatusBadge tone={dueTone(c.nextDueDate)}>{fmtDueDate(c.nextDueDate)}</StatusBadge>
+            <p className="mt-1 text-[10px] text-slate-500">
+              {c.dueReminderEnabled ? `every ${c.dueDay} of the month` : 'reminders off'}
+            </p>
+          </div>
+        ) : (
+          <span className="text-xs text-slate-600">—</span>
+        ),
+    },
+    {
       key: 'status',
       header: 'Status',
       render: (c) => <StatusBadge tone={STATUS_TONE[c.status]}>{c.status.toLowerCase()}</StatusBadge>,
@@ -336,14 +403,19 @@ export default function CommitmentsPage() {
         title="Commitments"
         subtitle="Investor pledges paid in installments — track received money, spending, and balance."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <Plus /> New commitment
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" loading={runningDue} onClick={() => void onRunDueReminders()}>
+              <BellRing /> Run due reminders
+            </Button>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus /> New commitment
+            </Button>
+          </div>
         }
       />
 
@@ -423,6 +495,28 @@ export default function CommitmentsPage() {
               className="[color-scheme:dark]"
             />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Monthly due day"
+              name="dueDay"
+              type="number"
+              min="1"
+              max="31"
+              step="1"
+              defaultValue={editing?.dueDay ?? ''}
+              placeholder="5"
+              hint="Day of every month the installment is expected. Leave empty for no reminder."
+            />
+            <Select
+              label="Monthly reminder"
+              name="dueReminderEnabled"
+              defaultValue={editing ? String(editing.dueReminderEnabled) : 'true'}
+              options={[
+                { value: 'true', label: 'On — notify the investor' },
+                { value: 'false', label: 'Off' },
+              ]}
+            />
+          </div>
           {editing && (
             <Select
               label="Status"
@@ -485,6 +579,19 @@ export default function CommitmentsPage() {
                 </div>
               ))}
             </div>
+
+            {detail.dueDay && detail.nextDueDate && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <span className="flex items-center gap-2 text-sm text-slate-300">
+                  <CalendarClock className="h-4 w-4 text-amber-300" />
+                  Due on day {detail.dueDay} of every month
+                </span>
+                <span className="flex items-center gap-2 text-xs text-slate-400">
+                  Next: <StatusBadge tone={dueTone(detail.nextDueDate)}>{fmtDueDate(detail.nextDueDate)}</StatusBadge>
+                  {!detail.dueReminderEnabled && <span className="text-slate-600">reminders off</span>}
+                </span>
+              </div>
+            )}
 
             {/* Funding progress */}
             <div>

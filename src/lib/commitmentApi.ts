@@ -68,6 +68,10 @@ interface RawCommitment {
   startDate?: string;
   notes?: string;
   status?: CommitmentStatus;
+  dueDay?: number;
+  nextDueDate?: string;
+  dueReminderEnabled?: boolean;
+  lastDueNotifiedAt?: string;
   createdAt?: string;
   // computed by the backend
   receivedTotal?: number;
@@ -115,6 +119,10 @@ export interface Commitment {
   startDate?: string;
   notes?: string;
   status: CommitmentStatus;
+  dueDay?: number;
+  nextDueDate?: string;
+  dueReminderEnabled: boolean;
+  lastDueNotifiedAt?: string;
   receivedTotal: number;
   paymentCount: number;
   spentTotal: number;
@@ -146,6 +154,10 @@ function mapCommitment(raw: RawCommitment): Commitment {
     startDate: raw.startDate,
     notes: raw.notes,
     status: raw.status ?? 'ACTIVE',
+    dueDay: raw.dueDay,
+    nextDueDate: raw.nextDueDate,
+    dueReminderEnabled: raw.dueReminderEnabled ?? true,
+    lastDueNotifiedAt: raw.lastDueNotifiedAt,
     receivedTotal: raw.receivedTotal ?? 0,
     paymentCount: raw.paymentCount ?? 0,
     spentTotal: raw.spentTotal ?? 0,
@@ -200,6 +212,14 @@ export interface CommitmentInput {
   startDate?: string;
   notes?: string;
   status?: CommitmentStatus;
+  dueDay?: number | null;
+  dueReminderEnabled?: boolean;
+}
+
+export interface DueRunResult {
+  checked: number;
+  notified: number;
+  skipped: number;
 }
 
 /** POST /commitments  (admin) */
@@ -215,6 +235,11 @@ export async function updateCommitment(
 ): Promise<Commitment> {
   const { data } = await api.patch<ApiResponse<RawCommitment>>(`/commitments/${id}`, input);
   return mapCommitment(data.data);
+}
+
+export async function runDueReminders(): Promise<DueRunResult> {
+  const { data } = await api.post<ApiResponse<DueRunResult>>('/commitments/due/run');
+  return data.data ?? { checked: 0, notified: 0, skipped: 0 };
 }
 
 /** DELETE /commitments/:id  (admin) — only allowed when it has no payments/expenses. */
