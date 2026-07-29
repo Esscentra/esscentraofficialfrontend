@@ -88,6 +88,9 @@ export interface Contact {
   phone?: string;
   designation?: string;
   notes?: string;
+  /** Parent account this contact belongs to. */
+  accountId?: string;
+  accountName?: string;
   createdAt?: string;
 }
 

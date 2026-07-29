@@ -26,6 +26,7 @@ import {
 import { AuroraBackground } from './AuroraBackground';
 import { Logo } from './Logo';
 import { ProfileMenu } from './ui/ProfileMenu';
+import { NotificationBell } from './ui/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './ui/Toast';
 import { cn, initials, isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
@@ -333,7 +334,8 @@ export function DashboardLayout() {
             <p className="truncate text-[11px] text-slate-500">{today}</p>
           </div>
 
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+            <NotificationBell />
             <ProfileMenu />
           </div>
         </header>
