@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { NextDueCard } from '@/components/ui/NextDueCard';
 import { FilePreviewModal } from '@/components/ui/FilePreviewModal';
 import { useAuth } from '@/context/AuthContext';
 import { getDashboardStats, type DashboardStats } from '@/lib/dashboardApi';
@@ -210,6 +211,10 @@ export default function InvestorDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Next payment due — served by GET /commitments/my/next-due, which is
+          the authoritative figure (it accounts for every active commitment). */}
+      <NextDueCard className="mb-4" />
 
       {/* Your commitments — pledge progress + how the funds were used */}
       {myCommitments && myCommitments.length > 0 && (

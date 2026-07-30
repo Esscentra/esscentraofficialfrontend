@@ -29,7 +29,8 @@ import { Logo } from './Logo';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './ui/Toast';
-import { cn, initials, isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
+import { Avatar } from './ui/Avatar';
+import { cn, isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
 
 const NAV = [
   { to: '/app', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -208,13 +209,7 @@ export function DashboardLayout() {
               <p className="text-sm font-semibold text-white">{user?.name}</p>
               <p className="text-xs text-slate-400">{user?.email}</p>
             </div>
-            <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold text-white ring-1 ring-white/20">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
-              ) : (
-                initials(user?.name ?? '')
-              )}
-            </div>
+            <Avatar src={user?.avatarUrl} name={user?.name} />
             <button
               onClick={onLogout}
               className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"

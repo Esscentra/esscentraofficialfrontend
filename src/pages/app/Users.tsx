@@ -19,11 +19,12 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, humanize, type Tone } from '@/components/ui/StatusBadge';
+import { Avatar } from '@/components/ui/Avatar';
 import { RowButton } from '@/components/ui/RowButton';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { getErrorMessage, initials, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
+import { getErrorMessage, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
 import { listRoles, listUsers, updateUserRole } from '@/lib/adminApi';
 import { InvestorRecordsModal } from '@/components/InvestorRecordsModal';
 import type { Role, User } from '@/types';
@@ -193,13 +194,7 @@ export default function UsersPage() {
       header: 'User',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold !text-white ring-1 ring-white/20">
-            {u.avatarUrl ? (
-              <img src={u.avatarUrl} alt={u.name} className="h-full w-full object-cover" />
-            ) : (
-              initials(u.name)
-            )}
-          </div>
+          <Avatar src={u.avatarUrl} name={u.name} />
           <div className="min-w-0">
             <p className="truncate font-medium text-white">{u.name}</p>
             <p className="truncate text-xs text-slate-400">{u.email}</p>
@@ -328,13 +323,13 @@ export default function UsersPage() {
           <div className="space-y-5">
             {/* Identity header */}
             <div className="flex items-center gap-4">
-              <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-lg font-bold !text-white ring-1 ring-white/20">
-                {viewing.avatarUrl ? (
-                  <img src={viewing.avatarUrl} alt={viewing.name} className="h-full w-full object-cover" />
-                ) : (
-                  initials(viewing.name)
-                )}
-              </div>
+              <Avatar
+                src={viewing.avatarUrl}
+                name={viewing.name}
+                className="h-16 w-16"
+                textClassName="text-lg"
+                rounded="rounded-2xl"
+              />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="truncate text-lg font-bold text-white">{viewing.name}</h3>
@@ -449,13 +444,12 @@ export default function UsersPage() {
         {editing && (
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-3 ring-1 ring-white/10">
-              <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-bold !text-white ring-1 ring-white/20">
-                {editing.avatarUrl ? (
-                  <img src={editing.avatarUrl} alt={editing.name} className="h-full w-full object-cover" />
-                ) : (
-                  initials(editing.name)
-                )}
-              </div>
+              <Avatar
+                src={editing.avatarUrl}
+                name={editing.name}
+                className="h-10 w-10"
+                textClassName="text-sm"
+              />
               <div className="min-w-0">
                 <p className="truncate font-medium text-white">{editing.name}</p>
                 <p className="truncate text-xs text-slate-400">{editing.email}</p>

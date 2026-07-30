@@ -14,6 +14,8 @@ import {
 import { Skeleton } from './ui/Skeleton';
 import { StatusBadge, type Tone } from './ui/StatusBadge';
 import { FilePreviewModal } from './ui/FilePreviewModal';
+import { NextDuePanel } from './ui/NextDueCard';
+import { EmailDeliveryPanel } from './ui/EmailDeliveryPanel';
 import { getCommitment, listCommitments, type Commitment } from '@/lib/commitmentApi';
 import { listInvestments, type Investment } from '@/lib/investmentApi';
 import { downloadUrlAsFile } from '@/lib/download';
@@ -117,129 +119,144 @@ export function InvestorRecordsModal({
   const hasRecords = commitments.length > 0 || standalone.length > 0;
 
   return createPortal(
-    <AnimatePresence>
-      {open && investor && (
-        <motion.div
-          className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-3 sm:p-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-
+    <>
+      {/* AnimatePresence must wrap ONLY the element that mounts/unmounts. The
+          nested preview modals are siblings — inside, they were unkeyed
+          children colliding with the panel on the empty key. */}
+      <AnimatePresence>
+        {open && investor && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.98 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-card relative z-10 my-4 w-full max-w-4xl !rounded-2xl p-0"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Investor records"
+            key="investor-records"
+            className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-3 sm:p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-white/10 bg-inherit px-4 py-4 sm:px-6">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30">
-                  <HandCoins className="h-5 w-5" />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="truncate font-display text-lg font-bold text-white">
-                    Investor records
-                  </h2>
-                  <p className="truncate text-xs text-slate-400">
-                    {investor.name} · {investor.email}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                aria-label="Close"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-            <div className="p-4 sm:p-6">
-              {loading ? (
-                <LoadingBody />
-              ) : error ? (
-                <div className="grid place-items-center py-16 text-center">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/30">
-                    <TriangleAlert className="h-6 w-6" />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="glass-card relative z-10 my-4 w-full max-w-4xl !rounded-2xl p-0"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Investor records"
+            >
+              {/* Header */}
+              <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-white/10 bg-inherit px-4 py-4 sm:px-6">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30">
+                    <HandCoins className="h-5 w-5" />
                   </span>
-                  <p className="mt-3 text-sm font-semibold text-white">Couldn’t load records</p>
-                  <p className="mt-1 max-w-sm text-xs text-slate-400">{error}</p>
-                </div>
-              ) : !hasRecords ? (
-                <div className="grid place-items-center py-16 text-center">
-                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.04] text-slate-400 ring-1 ring-white/10">
-                    <Wallet className="h-6 w-6" />
-                  </span>
-                  <p className="mt-3 text-sm font-semibold text-white">No investor records yet</p>
-                  <p className="mt-1 max-w-sm text-xs text-slate-400">
-                    This investor has no commitments or recorded investments.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Summary tiles */}
-                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <SummaryTile label="Committed" value={fmtFull(totalCommitted)} accent />
-                    <SummaryTile label="Paid in" value={fmtFull(totalReceived)} />
-                    <SummaryTile label="Spent" value={fmtFull(totalSpent)} />
-                    <SummaryTile label="Balance" value={fmtFull(balance)} />
+                  <div className="min-w-0">
+                    <h2 className="truncate font-display text-lg font-bold text-white">
+                      Investor records
+                    </h2>
+                    <p className="truncate text-xs text-slate-400">
+                      {investor.name} · {investor.email}
+                    </p>
                   </div>
-
-                  {/* Commitments */}
-                  {commitments.map((c) => (
-                    <CommitmentCard key={c.id} c={c} onPreviewPdf={openPdf} onPreview={setPreview} />
-                  ))}
-
-                  {/* Standalone investments */}
-                  {standalone.length > 0 && (
-                    <div className="glass-card p-5">
-                      <div className="mb-3 flex items-center gap-2.5">
-                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-400/15 text-brand-200 ring-1 ring-brand-400/30">
-                          <Wallet className="h-[18px] w-[18px]" />
-                        </span>
-                        <div>
-                          <h3 className="text-sm font-semibold text-white">Direct investments</h3>
-                          <p className="text-[11px] text-slate-500">
-                            Payments not tied to a commitment
-                          </p>
-                        </div>
-                      </div>
-                      <ul className="divide-y divide-white/5">
-                        {standalone.map((i) => (
-                          <li key={i.id} className="flex flex-wrap items-center gap-3 py-3">
-                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-400/20">
-                              <Receipt className="h-3.5 w-3.5" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-white tabular-nums">{fmtFull(i.amount)}</p>
-                              <p className="truncate text-xs text-slate-500">
-                                {fmtDate(i.investedAt)}
-                                {i.notes ? ` · ${i.notes}` : ''}
-                              </p>
-                            </div>
-                            <InvoiceActions
-                              url={i.invoiceUrl}
-                              name={i.invoiceName}
-                              onView={() => openPdf(i.invoiceUrl, i.invoiceName)}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
+                <button
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6">
+                {loading ? (
+                  <LoadingBody />
+                ) : error ? (
+                  <div className="grid place-items-center py-16 text-center">
+                    <span className="grid h-12 w-12 place-items-center rounded-2xl bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/30">
+                      <TriangleAlert className="h-6 w-6" />
+                    </span>
+                    <p className="mt-3 text-sm font-semibold text-white">Couldn’t load records</p>
+                    <p className="mt-1 max-w-sm text-xs text-slate-400">{error}</p>
+                  </div>
+                ) : !hasRecords ? (
+                  <div className="grid place-items-center py-16 text-center">
+                    <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.04] text-slate-400 ring-1 ring-white/10">
+                      <Wallet className="h-6 w-6" />
+                    </span>
+                    <p className="mt-3 text-sm font-semibold text-white">No investor records yet</p>
+                    <p className="mt-1 max-w-sm text-xs text-slate-400">
+                      This investor has no commitments or recorded investments.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Summary tiles */}
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                      <SummaryTile label="Committed" value={fmtFull(totalCommitted)} accent />
+                      <SummaryTile label="Paid in" value={fmtFull(totalReceived)} />
+                      <SummaryTile label="Spent" value={fmtFull(totalSpent)} />
+                      <SummaryTile label="Balance" value={fmtFull(balance)} />
+                    </div>
+
+                    {/* Next payment due for this investor (admin endpoint). */}
+                    <NextDuePanel
+                      investorId={investor.id}
+                      title={`Next payment due · ${investor.name}`}
+                    />
+
+                    {/* Commitments */}
+                    {commitments.map((c) => (
+                      <CommitmentCard key={c.id} c={c} onPreviewPdf={openPdf} onPreview={setPreview} />
+                    ))}
+
+                    {/* Was the reminder mail actually sent? If not, why not. */}
+                    <EmailDeliveryPanel userId={investor.id} />
+
+                    {/* Standalone investments */}
+                    {standalone.length > 0 && (
+                      <div className="glass-card p-5">
+                        <div className="mb-3 flex items-center gap-2.5">
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-400/15 text-brand-200 ring-1 ring-brand-400/30">
+                            <Wallet className="h-[18px] w-[18px]" />
+                          </span>
+                          <div>
+                            <h3 className="text-sm font-semibold text-white">Direct investments</h3>
+                            <p className="text-[11px] text-slate-500">
+                              Payments not tied to a commitment
+                            </p>
+                          </div>
+                        </div>
+                        <ul className="divide-y divide-white/5">
+                          {standalone.map((i) => (
+                            <li key={i.id} className="flex flex-wrap items-center gap-3 py-3">
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-400/20">
+                                <Receipt className="h-3.5 w-3.5" />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-white tabular-nums">{fmtFull(i.amount)}</p>
+                                <p className="truncate text-xs text-slate-500">
+                                  {fmtDate(i.investedAt)}
+                                  {i.notes ? ` · ${i.notes}` : ''}
+                                </p>
+                              </div>
+                              <InvoiceActions
+                                url={i.invoiceUrl}
+                                name={i.invoiceName}
+                                onView={() => openPdf(i.invoiceUrl, i.invoiceName)}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Nested file preview */}
       <FilePreviewModal
@@ -253,7 +270,7 @@ export function InvestorRecordsModal({
           preview ? () => void downloadUrlAsFile(preview.url, preview.name) : undefined
         }
       />
-    </AnimatePresence>,
+    </>,
     document.body,
   );
 }

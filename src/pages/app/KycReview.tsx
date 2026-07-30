@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge, humanize, type Tone } from '@/components/ui/StatusBadge';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
-import { initials } from '@/lib/utils';
+import { Avatar } from '@/components/ui/Avatar';
 import { getErrorMessage } from '@/lib/utils';
 import { approveKyc, listAllKyc, rejectKyc } from '@/lib/kycApi';
 import { listUsers } from '@/lib/adminApi';
@@ -137,13 +137,7 @@ export default function KycReviewPage() {
         const name = k.user?.name ?? k.fullName;
         return (
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold !text-white ring-1 ring-white/20">
-              {avatar ? (
-                <img src={avatar} alt={name} className="h-full w-full object-cover" />
-              ) : (
-                initials(name)
-              )}
-            </div>
+            <Avatar src={avatar} name={name} />
             <div className="min-w-0">
               <p className="truncate font-medium text-white">{name}</p>
               <p className="truncate text-xs text-slate-400">{k.user?.email ?? '—'}</p>
@@ -250,17 +244,13 @@ export default function KycReviewPage() {
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-bold !text-white ring-1 ring-white/20">
-                  {active.user?.id && avatarById[active.user.id] ? (
-                    <img
-                      src={avatarById[active.user.id]}
-                      alt={active.user?.name ?? active.fullName}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    initials(active.user?.name ?? active.fullName)
-                  )}
-                </div>
+                <Avatar
+                  src={active.user?.id ? avatarById[active.user.id] : undefined}
+                  name={active.user?.name ?? active.fullName}
+                  className="h-12 w-12"
+                  textClassName="text-sm"
+                  rounded="rounded-2xl"
+                />
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-white">{active.fullName}</p>
                   <p className="truncate text-xs text-slate-400">{active.user?.email ?? '—'}</p>

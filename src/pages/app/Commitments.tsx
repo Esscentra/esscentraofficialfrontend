@@ -220,7 +220,7 @@ export default function CommitmentsPage() {
       const result = await runDueReminders();
       toast.success(
         'Due reminders processed',
-        `${result.notified} investor ${result.notified === 1 ? 'notification' : 'notifications'} sent from ${result.checked} due ${result.checked === 1 ? 'commitment' : 'commitments'}.`,
+        `${result.notified} investor ${result.notified === 1 ? 'notification' : 'notifications'} sent from ${result.checked} due ${result.checked === 1 ? 'commitment' : 'commitments'} · ${result.emailsSent} ${result.emailsSent === 1 ? 'email' : 'emails'} delivered${result.emailsFailed ? `, ${result.emailsFailed} not sent` : ''}.`,
       );
       reloadList();
     } catch (err) {
@@ -492,7 +492,7 @@ export default function CommitmentsPage() {
               name="startDate"
               type="date"
               defaultValue={editing?.startDate ? editing.startDate.slice(0, 10) : ''}
-              className=""
+              className="[color-scheme:dark]"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -620,7 +620,7 @@ export default function CommitmentsPage() {
                 >
                   <div className="grid grid-cols-2 gap-3">
                     <Input label="Amount (₹)" name="amount" type="number" min="1" step="any" required placeholder="15000" />
-                    <Input label="Date" name="investedAt" type="date" className="" />
+                    <Input label="Date" name="investedAt" type="date" className="[color-scheme:dark]" />
                   </div>
                   <Input label="Notes" name="notes" placeholder="First installment" />
                   <FileField
@@ -702,7 +702,7 @@ export default function CommitmentsPage() {
                 >
                   <div className="grid grid-cols-2 gap-3">
                     <Input label="Amount (₹)" name="amount" type="number" min="1" step="any" required placeholder="5000" />
-                    <Input label="Date" name="spentAt" type="date" className="" />
+                    <Input label="Date" name="spentAt" type="date" className="[color-scheme:dark]" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Input label="Category" name="category" placeholder="Marketing / Salaries / Tools…" />

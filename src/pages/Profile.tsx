@@ -26,7 +26,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/lib/api';
 import { changePassword } from '@/lib/authApi';
 import { updateProfile } from '@/lib/userApi';
-import { initials } from '@/lib/utils';
+import { Avatar } from '@/components/ui/Avatar';
 import {
   profileSchema,
   changePasswordSchema,
@@ -230,13 +230,13 @@ function ProfileHeader({
       className="glass-card flex flex-col items-center gap-5 p-6 sm:flex-row sm:items-center sm:gap-6 sm:p-8"
     >
       <div className="relative">
-        <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-3xl bg-gradient-to-br from-brand-400 to-brand-700 text-2xl font-bold !text-white shadow-lg shadow-brand-900/40 ring-1 ring-white/20">
-          {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
-          ) : (
-            initials(user.name)
-          )}
-        </div>
+        <Avatar
+          src={user.avatarUrl}
+          name={user.name}
+          className="h-24 w-24 shadow-lg shadow-brand-900/40"
+          textClassName="text-2xl"
+          rounded="rounded-3xl"
+        />
         <button
           onClick={onPickPhoto}
           className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full bg-gradient-to-b from-brand-500 to-brand-600 !text-white shadow-lg shadow-brand-900/30 ring-2 ring-white/90 transition duration-150 hover:-translate-y-0.5 hover:from-brand-400 hover:to-brand-500 hover:shadow-xl hover:shadow-brand-500/40 active:translate-y-0 active:scale-95"

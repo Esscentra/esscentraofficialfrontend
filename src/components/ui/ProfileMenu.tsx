@@ -5,7 +5,8 @@ import { BookOpen, Check, ChevronDown, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './Toast';
 import { useTheme, type Theme } from '@/context/ThemeProvider';
-import { cn, initials } from '@/lib/utils';
+import { Avatar as UserAvatar } from './Avatar';
+import { cn } from '@/lib/utils';
 
 const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -44,18 +45,7 @@ export function ProfileMenu() {
   };
 
   const Avatar = ({ size = 'h-9 w-9' }: { size?: string }) => (
-    <div
-      className={cn(
-        'grid shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold !text-white ring-1 ring-white/20',
-        size,
-      )}
-    >
-      {user?.avatarUrl ? (
-        <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
-      ) : (
-        initials(user?.name ?? '')
-      )}
-    </div>
+    <UserAvatar src={user?.avatarUrl} name={user?.name} className={size} />
   );
 
   return (

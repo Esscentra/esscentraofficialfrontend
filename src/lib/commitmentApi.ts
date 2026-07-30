@@ -18,6 +18,8 @@ import type { Investment, InvestorRef } from './investmentApi';
  *   DELETE /commitments/:id               → delete (only when empty)    (admin)
  *   POST   /commitments/:id/expenses      → record spend                (admin)
  *   DELETE /commitments/expenses/:expId   → remove spend                (admin)
+ *   GET    /commitments/my/next-due       → own next payment due date
+ *   GET    /commitments/investors/:id/next-due → any investor's next due (admin)
  */
 
 export type CommitmentStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
@@ -187,6 +189,101 @@ function mapCommitment(raw: RawCommitment): Commitment {
   };
 }
 
+/* ------------------------------ Next due ------------------------------- */
+
+interface RawNextDueEntry {
+  commitmentId: string;
+  title: string;
+  currency: string;
+  committedAmount: number;
+  receivedTotal: number;
+  pendingAmount: number;
+  dueDay: number;
+  dueReminderEnabled: boolean;
+  nextDueDate: string;
+  nextDueDateLabel: string;
+  daysUntilDue: number;
+}
+
+interface RawNextDue {
+  investorId: string;
+  nextDueDate: string | null;
+  nextDueDateLabel: string | null;
+  daysUntilDue: number | null;
+  isOverdue: boolean;
+  currency: string | null;
+  pendingAmount: number;
+  commitment: RawNextDueEntry | null;
+  upcoming?: RawNextDueEntry[];
+}
+
+/** One ACTIVE commitment with money still outstanding, and when it's due. */
+export interface NextDueEntry {
+  commitmentId: string;
+  title: string;
+  currency: string;
+  committedAmount: number;
+  receivedTotal: number;
+  /** Committed minus received — what this due date is actually asking for. */
+  pendingAmount: number;
+  /** Day of the month the installment falls on (1–31). */
+  dueDay: number;
+  dueReminderEnabled: boolean;
+  /** ISO date at UTC midnight — format with `timeZone: 'UTC'`. */
+  nextDueDate: string;
+  /** Server-rendered "05 Aug 2026". */
+  nextDueDateLabel: string;
+  /** Whole days from today (IST) to the due date. Negative means overdue. */
+  daysUntilDue: number;
+}
+
+/**
+ * The investor's next payment: the soonest due date across their ACTIVE
+ * commitments that still have a balance. `commitment` is null (and
+ * `nextDueDate` null) when nothing is outstanding — that is a normal 200,
+ * not an error.
+ */
+export interface NextDue {
+  investorId: string;
+  nextDueDate: string | null;
+  nextDueDateLabel: string | null;
+  daysUntilDue: number | null;
+  isOverdue: boolean;
+  currency: string | null;
+  pendingAmount: number;
+  commitment: NextDueEntry | null;
+  /** Every pending commitment, earliest due first (includes `commitment`). */
+  upcoming: NextDueEntry[];
+}
+
+function mapNextDue(raw: RawNextDue): NextDue {
+  return {
+    investorId: raw.investorId,
+    nextDueDate: raw.nextDueDate ?? null,
+    nextDueDateLabel: raw.nextDueDateLabel ?? null,
+    daysUntilDue: raw.daysUntilDue ?? null,
+    isOverdue: raw.isOverdue ?? false,
+    currency: raw.currency ?? null,
+    pendingAmount: raw.pendingAmount ?? 0,
+    commitment: raw.commitment ?? null,
+    upcoming: raw.upcoming ?? [],
+  };
+}
+
+/** GET /commitments/my/next-due — the logged-in investor's next payment. */
+export async function getMyNextDue(): Promise<NextDue> {
+  const { data } = await api.get<ApiResponse<RawNextDue>>('/commitments/my/next-due');
+  return mapNextDue(data.data);
+}
+
+/** GET /commitments/investors/:investorId/next-due  (admin) */
+export async function getInvestorNextDue(investorId: string): Promise<NextDue> {
+  const { data } = await api.get<ApiResponse<RawNextDue>>(
+    `/commitments/investors/${investorId}/next-due`,
+  );
+  return mapNextDue(data.data);
+}
+
 /** GET /commitments  (admin) — all commitments with running totals. */
 export async function listCommitments(): Promise<Commitment[]> {
   const { data } = await api.get<ApiResponse<RawCommitment[]>>('/commitments');
@@ -220,6 +317,10 @@ export interface DueRunResult {
   checked: number;
   notified: number;
   skipped: number;
+  /** Reminder emails the provider accepted. */
+  emailsSent: number;
+  /** Reminder emails that failed or were deliberately skipped. */
+  emailsFailed: number;
 }
 
 /** POST /commitments  (admin) */
@@ -239,7 +340,9 @@ export async function updateCommitment(
 
 export async function runDueReminders(): Promise<DueRunResult> {
   const { data } = await api.post<ApiResponse<DueRunResult>>('/commitments/due/run');
-  return data.data ?? { checked: 0, notified: 0, skipped: 0 };
+  return (
+    data.data ?? { checked: 0, notified: 0, skipped: 0, emailsSent: 0, emailsFailed: 0 }
+  );
 }
 
 /** DELETE /commitments/:id  (admin) — only allowed when it has no payments/expenses. */

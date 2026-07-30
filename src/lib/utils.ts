@@ -39,6 +39,21 @@ export function getErrorMessage(e: unknown, fallback = 'Something went wrong.'):
   return e instanceof Error && e.message ? e.message : fallback;
 }
 
+/**
+ * True when a request failed because the route or record does not exist.
+ *
+ * Used to degrade quietly instead of shouting: a feature whose backend hasn't
+ * been deployed yet should read as "unavailable", not as a red error banner.
+ */
+export function isNotFound(e: unknown): boolean {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    'status' in e &&
+    (e as { status?: number }).status === 404
+  );
+}
+
 /** Strength score 0–4 plus a label, used by the password meter. */
 export function passwordStrength(pw: string): { score: number; label: string } {
   let score = 0;
