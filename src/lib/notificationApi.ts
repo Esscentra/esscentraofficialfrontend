@@ -21,6 +21,8 @@ interface RawNotification {
   isRead?: boolean;
   readAt?: string;
   createdAt?: string;
+  link?: string;
+  actionUrl?: string;
 }
 
 export interface AppNotification {
@@ -30,6 +32,8 @@ export interface AppNotification {
   type: NotificationType;
   isRead: boolean;
   createdAt?: string;
+  /** Optional in-app route or absolute URL to open when the item is clicked. */
+  link?: string;
 }
 
 function mapNotification(raw: RawNotification): AppNotification {
@@ -40,6 +44,7 @@ function mapNotification(raw: RawNotification): AppNotification {
     type: raw.type ?? 'SYSTEM',
     isRead: raw.isRead ?? false,
     createdAt: raw.createdAt,
+    link: raw.link ?? raw.actionUrl,
   };
 }
 

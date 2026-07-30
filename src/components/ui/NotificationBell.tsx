@@ -66,7 +66,7 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
 
-  const unread = items.filter((n) => !n.read).length;
+  const unread = items.filter((n) => !n.isRead).length;
 
   const load = useCallback(async () => {
     try {
@@ -109,8 +109,8 @@ export function NotificationBell() {
   };
 
   const onItemClick = async (n: AppNotification) => {
-    if (!n.read) {
-      setItems((prev) => prev.map((it) => (it.id === n.id ? { ...it, read: true } : it)));
+    if (!n.isRead) {
+      setItems((prev) => prev.map((it) => (it.id === n.id ? { ...it, isRead: true } : it)));
       markNotificationRead(n.id).catch(() => load());
     }
     if (n.link) {
@@ -124,7 +124,7 @@ export function NotificationBell() {
     if (!unread) return;
     setMarkingAll(true);
     const prev = items;
-    setItems((p) => p.map((it) => ({ ...it, read: true })));
+    setItems((p) => p.map((it) => ({ ...it, isRead: true })));
     try {
       await markAllNotificationsRead();
     } catch {
@@ -217,7 +217,7 @@ export function NotificationBell() {
                         key={n.id}
                         className={cn(
                           'group relative flex gap-3 px-4 py-3 transition-colors',
-                          !n.read && 'bg-brand-500/[0.05]',
+                          !n.isRead && 'bg-brand-500/[0.05]',
                           n.link && 'cursor-pointer hover:bg-white/[0.04]',
                         )}
                         onClick={() => void onItemClick(n)}
@@ -235,12 +235,12 @@ export function NotificationBell() {
                             <p
                               className={cn(
                                 'truncate text-sm',
-                                n.read ? 'font-medium text-slate-200' : 'font-semibold text-white',
+                                n.isRead ? 'font-medium text-slate-200' : 'font-semibold text-white',
                               )}
                             >
                               {n.title}
                             </p>
-                            {!n.read && (
+                            {!n.isRead && (
                               <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-400" aria-hidden />
                             )}
                           </div>
@@ -254,12 +254,12 @@ export function NotificationBell() {
 
                         {/* Per-item actions */}
                         <div className="absolute right-2 top-2 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                          {!n.read && (
+                          {!n.isRead && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setItems((prev) =>
-                                  prev.map((it) => (it.id === n.id ? { ...it, read: true } : it)),
+                                  prev.map((it) => (it.id === n.id ? { ...it, isRead: true } : it)),
                                 );
                                 markNotificationRead(n.id).catch(() => load());
                               }}
