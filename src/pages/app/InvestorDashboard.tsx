@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BadgeCheck,
   Building,
+  CalendarClock,
   Download,
   FileText,
   FolderKanban,
@@ -44,6 +45,24 @@ const inrFull = new Intl.NumberFormat('en-IN', {
 });
 const fmt = (n: number) => inrCompact.format(n);
 const fmtFull = (n: number) => inrFull.format(n);
+
+function fmtDueDate(iso?: string): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function daysUntil(iso: string): number {
+  const today = new Date();
+  return Math.ceil(
+    (new Date(iso).getTime() - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) /
+      86_400_000,
+  );
+}
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -247,6 +266,29 @@ export default function InvestorDashboard() {
                     </div>
                   ))}
                 </div>
+
+                {c.status === 'ACTIVE' &&
+                  c.dueDay &&
+                  c.nextDueDate &&
+                  c.remainingToReceive > 0 && (
+                    <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-4 py-3">
+                      <CalendarClock className="h-4 w-4 shrink-0 text-amber-300" />
+                      <p className="text-sm text-amber-100">
+                        Next payment due{' '}
+                        <span className="font-semibold">{fmtDueDate(c.nextDueDate)}</span>
+                        <span className="text-amber-200/70">
+                          {' '}
+                          ({daysUntil(c.nextDueDate) <= 0
+                            ? 'due now'
+                            : `in ${daysUntil(c.nextDueDate)} ${daysUntil(c.nextDueDate) === 1 ? 'day' : 'days'}`}
+                          )
+                        </span>
+                      </p>
+                      <p className="ml-auto text-xs text-amber-200/80">
+                        {fmtFull(c.remainingToReceive)} pending · every {c.dueDay} of the month
+                      </p>
+                    </div>
+                  )}
 
                 {/* Funding progress meter */}
                 <div className="mt-5">
