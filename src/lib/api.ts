@@ -6,7 +6,7 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
  */
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() ||
-  "https://esscentraofficialbackend.onrender.com/api/v1";
+  "https://api.esscentra.in/api/v1";
 
 /**
  * Normalized error thrown for any non-2xx response (or network/timeout failure).

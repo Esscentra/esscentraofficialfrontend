@@ -9,8 +9,8 @@ export function RowButton({
   return (
     <button
       type="button"
-      className={`grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 ${
-        danger ? 'hover:text-rose-300' : 'hover:text-white'
+      className={`grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent ${
+        danger ? 'hover:text-rose-300 disabled:hover:text-slate-400' : 'hover:text-white disabled:hover:text-slate-400'
       }`}
       {...props}
     >

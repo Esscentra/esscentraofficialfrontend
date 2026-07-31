@@ -60,6 +60,17 @@ function responsibilities(desc?: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Roles the application depends on by name. The auth middleware compares
+ * against these literally, so renaming or deleting one breaks access control
+ * for everyone holding it. The backend rejects both operations too — this is
+ * the UI half, so the buttons are never offered in the first place.
+ */
+const SYSTEM_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'USER', 'INVESTOR'];
+
+const isSystemRole = (name?: string) =>
+  !!name && SYSTEM_ROLES.includes(name.toUpperCase());
+
 /** "SUPER_ADMIN" → "Super Admin". */
 function prettyName(name: string): string {
   return (name ?? '')
@@ -268,13 +279,30 @@ export default function RolesPage() {
 
   /* --------------------------------- Delete --------------------------------- */
   const remove = async (role: Role) => {
+    if (isSystemRole(role.name)) {
+      toast.error(
+        'System role',
+        `"${role.name}" is required by the app's access checks and cannot be deleted.`,
+      );
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Delete the "${role.name}" role?\n\n` +
+          `Anyone still assigned to it would lose their access level. ` +
+          `This cannot be undone.`,
+      )
+    )
+      return;
+
     const prev = items;
     setItems((p) => p.filter((it) => it.id !== role.id)); // optimistic
     try {
       await deleteRole(role.id);
       toast.info('Role deleted', role.name);
     } catch (e) {
-      setItems(prev); // rollback on failure
+      setItems(prev); // rollback — e.g. the backend refused because users still hold it
       toast.error('Delete failed', getErrorMessage(e, 'Please try again.'));
     }
   };
@@ -295,7 +323,17 @@ export default function RolesPage() {
           <RowButton onClick={() => { setEditing(r); setOpen(true); }} aria-label="Edit" title="Edit">
             <Pencil className="h-4 w-4" />
           </RowButton>
-          <RowButton onClick={() => remove(r)} aria-label="Delete" title="Delete" danger>
+          <RowButton
+            onClick={() => remove(r)}
+            aria-label="Delete"
+            title={
+              isSystemRole(r.name)
+                ? 'System role — required by the app’s access checks'
+                : 'Delete'
+            }
+            disabled={isSystemRole(r.name)}
+            danger
+          >
             <Trash2 className="h-4 w-4" />
           </RowButton>
         </div>
@@ -352,7 +390,12 @@ export default function RolesPage() {
             name="name"
             defaultValue={editing?.name}
             placeholder="MANAGER"
-            hint="Stored in uppercase."
+            hint={
+              isSystemRole(editing?.name)
+                ? 'System role — the name is fixed. You can still edit the description.'
+                : 'Stored in uppercase.'
+            }
+            readOnly={isSystemRole(editing?.name)}
             required
           />
           <Textarea
