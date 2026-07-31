@@ -3,17 +3,27 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
 }
 
+/**
+ * Canonical form of a role name, so comparisons survive however the role was
+ * typed when it was created: "Freelance Performance Marketer" and
+ * "freelance-performance-marketer" both become
+ * "FREELANCE_PERFORMANCE_MARKETER".
+ */
+export function normalizeRoleName(role?: string): string {
+  return (role ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+}
+
 /** Roles with platform governance access (users + KYC review). */
 export const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
 /** True when the role can access admin-only areas (admin or super admin). */
 export function isAdminRole(role?: string): boolean {
-  return !!role && ADMIN_ROLES.includes(role);
+  return ADMIN_ROLES.includes(normalizeRoleName(role));
 }
 
 /** True only for the top-tier super admin (role types + super-admin assignment). */
 export function isSuperAdminRole(role?: string): boolean {
-  return role === 'SUPER_ADMIN';
+  return normalizeRoleName(role) === 'SUPER_ADMIN';
 }
 
 /**
@@ -21,7 +31,63 @@ export function isSuperAdminRole(role?: string): boolean {
  * never record-level CRM data (leads, contacts, deals, projects…).
  */
 export function isInvestorRole(role?: string): boolean {
-  return role === 'INVESTOR';
+  return normalizeRoleName(role) === 'INVESTOR';
+}
+
+/* --------------------------- narrow-surface roles -------------------------- */
+
+/**
+ * Roles whose workspace is deliberately narrow, mapped to the exact `/app`
+ * paths they may reach. Anything not listed is hidden from the sidebar,
+ * dropped from the Overview cards, and redirected away from when the URL is
+ * typed by hand.
+ *
+ * Personal screens (`/profile`, `/kyc`) sit outside `/app` and stay available
+ * to everyone — a contractor still has to manage their own account.
+ *
+ * Roles absent from this map are unrestricted here and fall back to the
+ * admin / super-admin / staff checks above.
+ */
+export const RESTRICTED_ROLE_PATHS: Record<string, string[]> = {
+  // Contract marketer: their own overview plus the projects they work on.
+  FREELANCE_PERFORMANCE_MARKETER: ['/app', '/app/projects'],
+};
+
+/** The outside contract-marketer role, by its canonical name. */
+export const MARKETER_ROLE = 'FREELANCE_PERFORMANCE_MARKETER';
+
+/**
+ * True for the contract marketer. They get their own Overview screen and a
+ * read-only Projects section — only a super admin creates or edits projects.
+ */
+export function isMarketerRole(role?: string): boolean {
+  return normalizeRoleName(role) === MARKETER_ROLE;
+}
+
+/** Allowed `/app` paths for a role, or `null` when the role is unrestricted. */
+export function allowedAppPaths(role?: string): string[] | null {
+  return RESTRICTED_ROLE_PATHS[normalizeRoleName(role)] ?? null;
+}
+
+/** True when the role gets a hand-picked list of pages instead of the full app. */
+export function isRestrictedRole(role?: string): boolean {
+  return allowedAppPaths(role) !== null;
+}
+
+/**
+ * True when `role` may open `path` (an `/app` route).
+ *
+ * `/app` matches the index only; every other entry also covers its children,
+ * so `/app/projects` grants `/app/projects/:id` without listing each one.
+ */
+export function canAccessAppPath(role: string | undefined, path: string): boolean {
+  const allowed = allowedAppPaths(role);
+  if (!allowed) return true;
+
+  const clean = path.replace(/\/+$/, '') || '/app';
+  return allowed.some((p) =>
+    p === '/app' ? clean === '/app' : clean === p || clean.startsWith(`${p}/`),
+  );
 }
 
 /** Deterministic gradient avatar from a string (used when no photo is set). */

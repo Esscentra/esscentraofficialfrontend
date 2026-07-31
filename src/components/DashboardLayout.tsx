@@ -30,7 +30,13 @@ import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './ui/Toast';
 import { Avatar } from './ui/Avatar';
-import { cn, isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
+import {
+  canAccessAppPath,
+  cn,
+  isAdminRole,
+  isInvestorRole,
+  isSuperAdminRole,
+} from '@/lib/utils';
 
 const NAV = [
   { to: '/app', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -74,10 +80,13 @@ export function DashboardLayout() {
 
   // Gate links by tier: Users/KYC Review = admin+, Roles = super admin only.
   // Investors (read-only stakeholders) only get the KPI overview.
+  // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) get only the pages listed
+  // for them — the check runs first so it can never be widened by a tier flag.
   const isAdmin = isAdminRole(user?.role);
   const isSuperAdmin = isSuperAdminRole(user?.role);
   const isInvestor = isInvestorRole(user?.role);
   const navItems = NAV.filter((item) => {
+    if (!canAccessAppPath(user?.role, item.to)) return false;
     if (item.superAdminOnly) return isSuperAdmin;
     if (item.adminOnly) return isAdmin;
     if (item.staffOnly) return !isInvestor;

@@ -1,5 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AdminRoute, GuestRoute, ProtectedRoute, StaffRoute, SuperAdminRoute } from './components/ProtectedRoute';
+import {
+  AdminRoute,
+  GuestRoute,
+  ProtectedRoute,
+  StaffRoute,
+  SuperAdminRoute,
+  WorkspaceRoute,
+} from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
@@ -13,6 +20,7 @@ import Dashboard from './pages/app/Dashboard';
 import LeadsPage from './pages/app/Leads';
 import OpportunitiesPage from './pages/app/Opportunities';
 import ProjectsPage from './pages/app/Projects';
+import ProjectDetailPage from './pages/app/ProjectDetail';
 import TasksPage from './pages/app/Tasks';
 import AccountsPage from './pages/app/Accounts';
 import ContactsPage from './pages/app/Contacts';
@@ -89,12 +97,15 @@ export default function App() {
         }
       />
 
-      {/* Dashboard workspace (sidebar + topbar shell) */}
+      {/* Dashboard workspace (sidebar + topbar shell).
+          WorkspaceRoute applies the per-role page allowlist to every child. */}
       <Route
         path="/app"
         element={
           <ProtectedRoute>
-            <DashboardLayout />
+            <WorkspaceRoute>
+              <DashboardLayout />
+            </WorkspaceRoute>
           </ProtectedRoute>
         }
       >
@@ -113,6 +124,8 @@ export default function App() {
         <Route path="opportunities" element={<StaffRoute><OpportunitiesPage /></StaffRoute>} />
         <Route path="accounts" element={<StaffRoute><AccountsPage /></StaffRoute>} />
         <Route path="projects" element={<StaffRoute><ProjectsPage /></StaffRoute>} />
+        {/* Project detail — read-only unless the caller is a super admin. */}
+        <Route path="projects/:id" element={<StaffRoute><ProjectDetailPage /></StaffRoute>} />
         <Route path="tasks" element={<StaffRoute><TasksPage /></StaffRoute>} />
         <Route path="contacts" element={<StaffRoute><ContactsPage /></StaffRoute>} />
         <Route path="inquiries" element={<StaffRoute><InquiriesPage /></StaffRoute>} />

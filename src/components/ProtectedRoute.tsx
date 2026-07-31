@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
+import { canAccessAppPath, isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
 import { FullPageLoader } from './FullPageLoader';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -11,6 +11,25 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (loading) return <FullPageLoader />;
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  return <>{children}</>;
+}
+
+/**
+ * Wraps the whole `/app` workspace and enforces the per-role page allowlist
+ * (RESTRICTED_ROLE_PATHS in lib/utils). One choke point covers every child
+ * route — present and future — so a narrow-surface role can't reach a page by
+ * typing its URL. Roles with no allowlist pass straight through.
+ *
+ * Not a replacement for AdminRoute / StaffRoute: those still gate by tier.
+ */
+export function WorkspaceRoute({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullPageLoader />;
+  if (!canAccessAppPath(user?.role, location.pathname)) {
+    return <Navigate to="/app" replace />;
   }
   return <>{children}</>;
 }

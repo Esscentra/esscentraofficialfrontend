@@ -54,6 +54,44 @@ export type ProjectStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
+/** Lifecycle of the contract with the assigned contractor. */
+export type ContractStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED';
+
+/** Where the contractor's money stands. */
+export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+
+export type ProjectDocumentCategory = 'AGREEMENT' | 'INVOICE' | 'REPORT' | 'OTHER';
+
+export type DeliverableStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+
+/**
+ * A PDF attached to the project by a super admin.
+ *
+ * The storage URL is deliberately absent — the backend never sends it. Files
+ * are fetched through the authenticated download endpoint so permission is
+ * re-checked on every request.
+ */
+export interface ProjectDocument {
+  id: string;
+  title: string;
+  category: ProjectDocumentCategory;
+  originalName?: string;
+  sizeBytes?: number;
+  uploadedAt?: string;
+  /** The file's storage account is unreachable — disable the download. */
+  unavailable?: boolean;
+}
+
+/** A unit of work owed on the project. */
+export interface Deliverable {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  status: DeliverableStatus;
+  completedAt?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -63,6 +101,84 @@ export interface Project {
   endDate?: string;
   budget?: number;
   createdAt?: string;
+
+  /** Populated names from the backend. */
+  ownerName?: string;
+  accountName?: string;
+
+  /* ------------------------- contractor assignment ------------------------ */
+  assignedMarketerId?: string;
+  assignedMarketerName?: string;
+  contractStatus: ContractStatus;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  paymentStatus: PaymentStatus;
+
+  /** Empty for anyone who isn't an admin or the assigned contractor. */
+  documents: ProjectDocument[];
+  deliverables: Deliverable[];
+}
+
+/** A weekly progress report filed by the contractor. */
+export interface WeeklyReport {
+  id: string;
+  projectId: string;
+  weekStart: string;
+  weekEnd: string;
+  summary: string;
+  achievements?: string;
+  blockers?: string;
+  submittedAt?: string;
+  marketerName?: string;
+}
+
+/** A dated item the contractor's overview counts down to. */
+export interface UpcomingDeadline {
+  type: 'DELIVERABLE' | 'CONTRACT_END';
+  id: string;
+  title: string;
+  projectId: string;
+  projectName: string;
+  dueDate: string;
+  daysRemaining: number | null;
+  overdue: boolean;
+}
+
+/** Everything the contractor's Overview screen renders, from one call. */
+export interface MarketerOverview {
+  contractStatus: ContractStatus | null;
+  contractStartDate: string | null;
+  contractEndDate: string | null;
+  daysRemaining: number | null;
+  paymentStatus: PaymentStatus | null;
+
+  currentProject: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: ProjectStatus;
+    budget: number | null;
+    documentCount: number;
+  } | null;
+  projectCount: number;
+
+  weeklyReportsSubmitted: number;
+  lastReportWeekStart: string | null;
+  pendingDeliverables: number;
+  totalDeliverables: number;
+  completedDeliverables: number;
+
+  upcomingDeadlines: UpcomingDeadline[];
+
+  unreadNotifications: number;
+  notifications: Array<{
+    id: string;
+    title: string;
+    message: string;
+    type: string;
+    isRead: boolean;
+    createdAt: string;
+  }>;
 }
 
 /* ----------------------------------- Task ---------------------------------- */

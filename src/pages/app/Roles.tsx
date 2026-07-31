@@ -29,7 +29,7 @@ import { RowButton } from '@/components/ui/RowButton';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useToast } from '@/components/ui/Toast';
 import { createRole, deleteRole, listRoles, updateRole } from '@/lib/adminApi';
-import { getErrorMessage } from '@/lib/utils';
+import { getErrorMessage, normalizeRoleName } from '@/lib/utils';
 import type { Role } from '@/types';
 
 /* ---------------------- role → tier / icon / colour ------------------------ */
@@ -66,10 +66,19 @@ function responsibilities(desc?: string): string[] {
  * for everyone holding it. The backend rejects both operations too — this is
  * the UI half, so the buttons are never offered in the first place.
  */
-const SYSTEM_ROLES = ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'USER', 'INVESTOR'];
+const SYSTEM_ROLES = [
+  'SUPER_ADMIN',
+  'ADMIN',
+  'EDITOR',
+  'USER',
+  'INVESTOR',
+  // Narrow-surface role: RESTRICTED_ROLE_PATHS in lib/utils.ts keys off this
+  // exact name, so renaming it would hand the holder the full workspace.
+  'FREELANCE_PERFORMANCE_MARKETER',
+];
 
 const isSystemRole = (name?: string) =>
-  !!name && SYSTEM_ROLES.includes(name.toUpperCase());
+  !!name && SYSTEM_ROLES.includes(normalizeRoleName(name));
 
 /** "SUPER_ADMIN" → "Super Admin". */
 function prettyName(name: string): string {

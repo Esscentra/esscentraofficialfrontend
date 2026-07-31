@@ -18,8 +18,15 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '@/context/AuthContext';
-import { isAdminRole, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
+import {
+  canAccessAppPath,
+  isAdminRole,
+  isInvestorRole,
+  isMarketerRole,
+  isSuperAdminRole,
+} from '@/lib/utils';
 import InvestorDashboard from './InvestorDashboard';
+import MarketerDashboard from './MarketerDashboard';
 
 type Card = {
   to: string;
@@ -54,20 +61,27 @@ export default function Dashboard() {
 
   const isAdmin = isAdminRole(user?.role);
   const isSuperAdmin = isSuperAdminRole(user?.role);
+  const role = user?.role;
   const cards = useMemo(
     () =>
       CARDS.filter((c) => {
+        // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) only get their pages.
+        if (!canAccessAppPath(role, c.to)) return false;
         if (c.superAdminOnly) return isSuperAdmin;
         if (c.adminOnly) return isAdmin;
         return true;
       }),
-    [isAdmin, isSuperAdmin],
+    [isAdmin, isSuperAdmin, role],
   );
 
-  // Read-only stakeholders get the KPI overview instead of workspace cards.
+  // Narrow-surface roles get a purpose-built overview instead of the workspace
+  // card grid, which would mostly link to pages they cannot open.
   // (Placed after the hooks above so hook order stays stable.)
   if (isInvestorRole(user?.role)) {
     return <InvestorDashboard />;
+  }
+  if (isMarketerRole(user?.role)) {
+    return <MarketerDashboard />;
   }
 
   return (
