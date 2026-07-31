@@ -30,6 +30,14 @@ export interface KycRecord {
   frontImageUrl?: string;
   backImageUrl?: string;
   selfieUrl?: string;
+  /**
+   * True when the file is no longer fetchable — its storage account is not
+   * connected anymore. The URL is kept so the record still shows a document
+   * WAS submitted; only the link is disabled.
+   */
+  frontImageUnavailable?: boolean;
+  backImageUnavailable?: boolean;
+  selfieUnavailable?: boolean;
   status: KycStatus;
   rejectionReason?: string;
   verifiedAt?: string;

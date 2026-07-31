@@ -41,6 +41,8 @@ interface RawInvestment {
   notes?: string;
   invoiceUrl?: string;
   invoiceOriginalName?: string;
+  /** Backend flag: the invoice file's storage account is no longer connected. */
+  invoiceUnavailable?: boolean;
   invoiceUploadedAt?: string;
   createdAt?: string;
 }
@@ -63,6 +65,8 @@ export interface Investment {
   invoiceUrl?: string;
   /** Original filename of the invoice (used for a clean download name). */
   invoiceName?: string;
+  /** False when the invoice file's storage account is no longer connected. */
+  invoiceAvailable: boolean;
   invoiceUploadedAt?: string;
   createdAt?: string;
 }
@@ -95,6 +99,7 @@ function mapInvestment(raw: RawInvestment): Investment {
     notes: raw.notes,
     invoiceUrl: raw.invoiceUrl,
     invoiceName: raw.invoiceOriginalName,
+    invoiceAvailable: !!raw.invoiceUrl && !raw.invoiceUnavailable,
     invoiceUploadedAt: raw.invoiceUploadedAt,
     createdAt: raw.createdAt,
   };

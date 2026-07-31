@@ -12,12 +12,20 @@ import { Button } from './Button';
  *
  * Requires a secure context (HTTPS or localhost) — browsers block camera
  * access on plain http://.
+ *
+ * MIRRORING — the captured File is ALWAYS true-to-life, never mirrored.
+ * `mirrorPreview` flips the on-screen video only, which is the familiar
+ * selfie-camera behaviour and makes it easier to position your own face.
+ * It must stay off for documents: a mirrored preview renders the text on an
+ * Aadhaar/PAN card backwards, so the user frames the shot against an image
+ * that doesn't match what gets saved.
  */
 export function CameraCapture({
   open,
   onClose,
   onCapture,
   facingMode = 'user',
+  mirrorPreview,
   fileName = 'selfie.jpg',
 }: {
   open: boolean;
@@ -25,6 +33,15 @@ export function CameraCapture({
   onCapture: (file: File) => void;
   /** "user" = front camera (selfie), "environment" = rear camera. */
   facingMode?: 'user' | 'environment';
+  /**
+   * Flip the live preview horizontally. Defaults to true for the front camera
+   * (natural selfie framing) and false for the rear camera. Pass `false`
+   * explicitly for anything where the user needs to read text on screen —
+   * an ID card, a document, a QR code.
+   *
+   * This never affects the saved file.
+   */
+  mirrorPreview?: boolean;
   fileName?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +52,11 @@ export function CameraCapture({
   const tokenRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+
+  // A laptop has no rear camera, and facingMode is a soft constraint — asking
+  // for "environment" there quietly hands back the front camera. So key the
+  // default off what was REQUESTED: document captures stay unmirrored either way.
+  const mirrored = mirrorPreview ?? facingMode === 'user';
 
   const stop = useCallback(() => {
     tokenRef.current++;
@@ -98,7 +120,14 @@ export function CameraCapture({
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // drawImage reads the raw video frame and ignores any CSS transform on the
+    // element, so this writes the true, unmirrored image regardless of how the
+    // preview above is displayed. That is what we want for KYC: a mirrored
+    // selfie can fail face-matching against the ID, and mirrored card text is
+    // unreadable for whoever reviews it.
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
@@ -134,7 +163,9 @@ export function CameraCapture({
                 ref={videoRef}
                 playsInline
                 muted
-                className="aspect-[4/3] w-full object-cover [transform:scaleX(-1)]"
+                className={`aspect-[4/3] w-full object-cover ${
+                  mirrored ? '[transform:scaleX(-1)]' : ''
+                }`}
               />
               {!ready && (
                 <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">
@@ -142,6 +173,12 @@ export function CameraCapture({
                 </div>
               )}
             </div>
+            {!mirrored && (
+              <p className="text-[11px] text-slate-500">
+                Hold the document flat and fill the frame. The photo is saved exactly as
+                shown here.
+              </p>
+            )}
             <div className="flex justify-end gap-3">
               <Button type="button" variant="secondary" onClick={onClose}>
                 Cancel

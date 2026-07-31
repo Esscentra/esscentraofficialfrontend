@@ -6,6 +6,7 @@ import {
   FileText,
   HandCoins,
   Image as ImageIcon,
+  FileX2,
   Receipt,
   TriangleAlert,
   Wallet,
@@ -243,6 +244,7 @@ export function InvestorRecordsModal({
                               <InvoiceActions
                                 url={i.invoiceUrl}
                                 name={i.invoiceName}
+                                available={i.invoiceAvailable}
                                 onView={() => openPdf(i.invoiceUrl, i.invoiceName)}
                               />
                             </li>
@@ -301,12 +303,27 @@ function InvoiceActions({
   url,
   name,
   onView,
+  available = true,
 }: {
   url?: string;
   name?: string;
   onView: () => void;
+  /** False when the file's storage account is no longer connected. */
+  available?: boolean;
 }) {
   if (!url) return <span className="text-[11px] text-slate-500">Invoice pending</span>;
+  // The invoice exists on the record but the file itself is unreachable —
+  // say that, rather than offering a button that leads to a 404.
+  if (!available) {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/[0.07] px-2.5 py-1.5 text-[11px] font-semibold text-amber-200"
+        title="Stored on a media account that is no longer connected"
+      >
+        <FileX2 className="h-3.5 w-3.5" /> File unavailable
+      </span>
+    );
+  }
   return (
     <span className="flex shrink-0 items-center gap-2">
       <button
@@ -408,6 +425,7 @@ function CommitmentCard({
                 <InvoiceActions
                   url={p.invoiceUrl}
                   name={p.invoiceName}
+                  available={p.invoiceAvailable}
                   onView={() => onPreviewPdf(p.invoiceUrl, p.invoiceName)}
                 />
               </li>
@@ -436,35 +454,57 @@ function CommitmentCard({
                 </div>
                 {x.attachments.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {x.attachments.map((a, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]"
-                      >
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onPreview({ url: a.url, name: a.name, kind: a.isPdf ? 'pdf' : 'image' })
-                          }
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]"
+                    {x.attachments.map((a, i) =>
+                      // Keep listing the proof file even when it can't be
+                      // fetched — "there was a receipt" is itself a fact.
+                      a.available ? (
+                        <span
+                          key={i}
+                          className="inline-flex items-center overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]"
                         >
-                          {a.isPdf ? (
-                            <FileText className="h-3.5 w-3.5 text-brand-300" />
-                          ) : (
-                            <ImageIcon className="h-3.5 w-3.5 text-brand-300" />
-                          )}
-                          <span className="max-w-[9rem] truncate">{a.name}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void downloadUrlAsFile(a.url, a.name)}
-                          className="grid h-8 w-8 shrink-0 place-items-center border-l border-white/10 text-slate-400 transition hover:bg-white/10 hover:text-white"
-                          title="Download"
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onPreview({
+                                url: a.url,
+                                name: a.name,
+                                kind: a.isPdf ? 'pdf' : 'image',
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/[0.06]"
+                          >
+                            {a.isPdf ? (
+                              <FileText className="h-3.5 w-3.5 text-brand-300" />
+                            ) : (
+                              <ImageIcon className="h-3.5 w-3.5 text-brand-300" />
+                            )}
+                            <span className="max-w-[9rem] truncate">{a.name}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void downloadUrlAsFile(a.url, a.name)}
+                            className="grid h-8 w-8 shrink-0 place-items-center border-l border-white/10 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                            title="Download"
+                          >
+                            <Download className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ) : (
+                        <span
+                          key={i}
+                          title="Stored on a media account that is no longer connected"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/[0.07] px-2.5 py-1.5 text-xs font-medium text-amber-200"
                         >
-                          <Download className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
+                          <FileX2 className="h-3.5 w-3.5" />
+                          <span className="max-w-[9rem] truncate line-through opacity-80">
+                            {a.name}
+                          </span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide">
+                            unavailable
+                          </span>
+                        </span>
+                      ),
+                    )}
                   </div>
                 )}
               </li>

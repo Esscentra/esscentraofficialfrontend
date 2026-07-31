@@ -13,6 +13,9 @@ interface RawKyc {
   frontImageUrl?: string;
   backImageUrl?: string;
   selfieUrl?: string;
+  frontImageUnavailable?: boolean;
+  backImageUnavailable?: boolean;
+  selfieUnavailable?: boolean;
   status: KycRecord['status'];
   rejectionReason?: string;
   verifiedAt?: string;
@@ -29,6 +32,9 @@ function mapKyc(raw: RawKyc): KycRecord {
     frontImageUrl: raw.frontImageUrl,
     backImageUrl: raw.backImageUrl,
     selfieUrl: raw.selfieUrl,
+    frontImageUnavailable: raw.frontImageUnavailable,
+    backImageUnavailable: raw.backImageUnavailable,
+    selfieUnavailable: raw.selfieUnavailable,
     status: raw.status,
     rejectionReason: raw.rejectionReason,
     verifiedAt: raw.verifiedAt,

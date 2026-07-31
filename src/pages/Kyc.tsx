@@ -193,9 +193,21 @@ function StatusCard({ record }: { record: KycRecord }) {
             Uploaded documents
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <DocThumb label="Front image" url={record.frontImageUrl} />
-            <DocThumb label="Back image" url={record.backImageUrl} />
-            <DocThumb label="Selfie" url={record.selfieUrl} />
+            <DocThumb
+              label="Front image"
+              url={record.frontImageUrl}
+              unavailable={record.frontImageUnavailable}
+            />
+            <DocThumb
+              label="Back image"
+              url={record.backImageUrl}
+              unavailable={record.backImageUnavailable}
+            />
+            <DocThumb
+              label="Selfie"
+              url={record.selfieUrl}
+              unavailable={record.selfieUnavailable}
+            />
           </div>
         </div>
       )}
@@ -204,9 +216,37 @@ function StatusCard({ record }: { record: KycRecord }) {
 }
 
 /** Clickable thumbnail for an uploaded KYC image; opens the full file in a new tab. */
-function DocThumb({ label, url }: { label: string; url?: string }) {
+function DocThumb({
+  label,
+  url,
+  unavailable,
+}: {
+  label: string;
+  url?: string;
+  /** Backend flag: the file's storage account is no longer connected. */
+  unavailable?: boolean;
+}) {
   const [broken, setBroken] = useState(false);
   if (!url) return null;
+
+  // Known-dead file: render a static card rather than a link that 404s.
+  if (unavailable) {
+    return (
+      <div className="relative block overflow-hidden rounded-xl border border-amber-400/25 bg-amber-500/[0.05]">
+        <div className="grid aspect-[4/3] place-items-center gap-1 px-3 text-center">
+          <ImageOff className="mx-auto h-5 w-5 text-amber-300" />
+          <span className="text-[11px] font-semibold text-amber-200">File unavailable</span>
+          <span className="text-[10px] leading-tight text-amber-200/70">
+            Uploaded, but no longer stored. Please re-upload.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2">
+          <span className="truncate text-xs font-medium text-slate-300">{label}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <a
       href={url}

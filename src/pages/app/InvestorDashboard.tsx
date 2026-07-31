@@ -5,6 +5,7 @@ import {
   CalendarClock,
   Download,
   FileText,
+  FileX2,
   FolderKanban,
   HandCoins,
   Image as ImageIcon,
@@ -332,33 +333,45 @@ export default function InvestorDashboard() {
                           </span>
                           {x.attachments.length > 0 && (
                             <span className="flex shrink-0 items-center gap-0.5">
-                              {x.attachments.map((a, i) => (
-                                <span key={i} className="flex items-center">
-                                  <a
-                                    href={a.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title={`View ${a.name}`}
-                                    className="grid h-7 w-7 place-items-center rounded-lg text-brand-300 hover:bg-brand-500/10"
+                              {x.attachments.map((a, i) =>
+                                a.available ? (
+                                  <span key={i} className="flex items-center">
+                                    <a
+                                      href={a.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title={`View ${a.name}`}
+                                      className="grid h-7 w-7 place-items-center rounded-lg text-brand-300 hover:bg-brand-500/10"
+                                    >
+                                      {a.isPdf ? (
+                                        <FileText className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <ImageIcon className="h-3.5 w-3.5" />
+                                      )}
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void downloadExpenseAttachment(x.id, i, a.name).catch(
+                                          () => {},
+                                        )
+                                      }
+                                      title={`Download ${a.name}`}
+                                      className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
+                                    >
+                                      <Download className="h-3 w-3" />
+                                    </button>
+                                  </span>
+                                ) : (
+                                  <span
+                                    key={i}
+                                    title={`${a.name} — stored on a media account that is no longer connected`}
+                                    className="grid h-7 w-7 place-items-center rounded-lg text-amber-300/70"
                                   >
-                                    {a.isPdf ? (
-                                      <FileText className="h-3.5 w-3.5" />
-                                    ) : (
-                                      <ImageIcon className="h-3.5 w-3.5" />
-                                    )}
-                                  </a>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      void downloadExpenseAttachment(x.id, i, a.name).catch(() => {})
-                                    }
-                                    title={`Download ${a.name}`}
-                                    className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
-                                  >
-                                    <Download className="h-3 w-3" />
-                                  </button>
-                                </span>
-                              ))}
+                                    <FileX2 className="h-3.5 w-3.5" />
+                                  </span>
+                                ),
+                              )}
                             </span>
                           )}
                           <span className="tabular-nums text-slate-400">{fmtFull(x.amount)}</span>
@@ -422,7 +435,14 @@ export default function InvestorDashboard() {
                     {inv.notes ? ` · ${inv.notes}` : ''}
                   </p>
                 </div>
-                {inv.invoiceUrl ? (
+                {inv.invoiceUrl && !inv.invoiceAvailable ? (
+                  <span
+                    title="Stored on a media account that is no longer connected"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/[0.07] px-3 py-1.5 text-xs font-semibold text-amber-200"
+                  >
+                    <FileX2 className="h-3.5 w-3.5" /> Invoice unavailable
+                  </span>
+                ) : inv.invoiceUrl ? (
                   <span className="flex items-center gap-2">
                     <button
                       type="button"

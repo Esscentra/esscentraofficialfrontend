@@ -37,6 +37,8 @@ interface RawAttachment {
   resourceType?: 'image' | 'raw';
   originalName?: string;
   mimeType?: string;
+  /** Backend flag: the file's storage account is no longer connected. */
+  unavailable?: boolean;
 }
 
 interface RawExpense {
@@ -58,6 +60,7 @@ interface RawPayment {
   notes?: string;
   invoiceUrl?: string;
   invoiceOriginalName?: string;
+  invoiceUnavailable?: boolean;
 }
 
 interface RawCommitment {
@@ -92,6 +95,12 @@ export interface ExpenseAttachment {
   /** True when the file is a PDF (renders/downloads differently from images). */
   isPdf: boolean;
   name: string;
+  /**
+   * False when the file can no longer be fetched — its storage account is not
+   * connected anymore. The row still lists the attachment (the expense DID
+   * have a receipt); the actions are just disabled.
+   */
+  available: boolean;
 }
 
 export interface CommitmentExpense {
@@ -110,6 +119,8 @@ export interface CommitmentPayment {
   notes?: string;
   invoiceUrl?: string;
   invoiceName?: string;
+  /** False when the invoice file's storage account is no longer connected. */
+  invoiceAvailable: boolean;
 }
 
 export interface Commitment {
@@ -173,6 +184,7 @@ function mapCommitment(raw: RawCommitment): Commitment {
       notes: p.notes,
       invoiceUrl: p.invoiceUrl,
       invoiceName: p.invoiceOriginalName,
+      invoiceAvailable: !!p.invoiceUrl && !p.invoiceUnavailable,
     })),
     expenses: raw.expenses?.map((e) => ({
       id: e.id ?? e._id ?? '',
@@ -184,6 +196,7 @@ function mapCommitment(raw: RawCommitment): Commitment {
         url: a.url,
         isPdf: a.resourceType === 'raw' || a.mimeType === 'application/pdf',
         name: a.originalName || `proof-${i + 1}`,
+        available: !a.unavailable,
       })),
     })),
   };

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { BadgeCheck, Check, Search, ShieldCheck, X } from 'lucide-react';
+import { BadgeCheck, Check, FileX2, Search, ShieldCheck, X } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataTable, type Column } from '@/components/ui/DataTable';
@@ -280,31 +280,47 @@ export default function KycReviewPage() {
 
             <div className="grid grid-cols-3 gap-3">
               {([
-                ['Front', active.frontImageUrl],
-                ['Back', active.backImageUrl],
-                ['Selfie', active.selfieUrl],
-              ] as const).map(([label, url]) => (
-                <a
-                  key={label}
-                  href={url || undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`group relative overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10 ${
-                    url ? '' : 'pointer-events-none opacity-40'
-                  }`}
-                >
-                  {url ? (
-                    <img src={url} alt={label} className="aspect-[4/3] w-full object-cover" />
-                  ) : (
-                    <div className="grid aspect-[4/3] place-items-center text-[11px] text-slate-500">
-                      None
-                    </div>
-                  )}
-                  <span className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1 text-[11px] text-slate-200">
-                    {label}
-                  </span>
-                </a>
-              ))}
+                ['Front', active.frontImageUrl, active.frontImageUnavailable],
+                ['Back', active.backImageUrl, active.backImageUnavailable],
+                ['Selfie', active.selfieUrl, active.selfieUnavailable],
+              ] as const).map(([label, url, unavailable]) => {
+                // A submitted-but-unreachable document is NOT the same as one
+                // that was never submitted — a reviewer must be able to tell
+                // them apart before approving or rejecting.
+                const openable = !!url && !unavailable;
+                return (
+                  <a
+                    key={label}
+                    href={openable ? url : undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`group relative overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10 ${
+                      openable ? '' : 'pointer-events-none'
+                    } ${!url ? 'opacity-40' : ''}`}
+                  >
+                    {openable ? (
+                      <img src={url} alt={label} className="aspect-[4/3] w-full object-cover" />
+                    ) : url ? (
+                      <div className="grid aspect-[4/3] place-items-center gap-1 bg-amber-500/[0.07] px-2 text-center ring-1 ring-inset ring-amber-400/25">
+                        <FileX2 className="mx-auto h-4 w-4 text-amber-300" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                          Unavailable
+                        </span>
+                        <span className="text-[9px] leading-tight text-amber-200/70">
+                          Submitted, file no longer stored
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid aspect-[4/3] place-items-center text-[11px] text-slate-500">
+                        None
+                      </div>
+                    )}
+                    <span className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1 text-[11px] text-slate-200">
+                      {label}
+                    </span>
+                  </a>
+                );
+              })}
             </div>
 
             {active.status === 'APPROVED' && (
