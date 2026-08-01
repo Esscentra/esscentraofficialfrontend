@@ -20,13 +20,10 @@ import {
   updateProject,
   type ProjectInput,
 } from '@/lib/projectApi';
-import { listUsers } from '@/lib/adminApi';
-import { getErrorMessage, isMarketerRole, isSuperAdminRole } from '@/lib/utils';
-import type { ContractStatus, PaymentStatus, Project, ProjectStatus, User } from '@/types';
+import { getErrorMessage, isSuperAdminRole } from '@/lib/utils';
+import type { Project, ProjectStatus } from '@/types';
 
 const STATUSES: ProjectStatus[] = ['PLANNED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
-const CONTRACT_STATUSES: ContractStatus[] = ['PENDING', 'ACTIVE', 'COMPLETED'];
-const PAYMENT_STATUSES: PaymentStatus[] = ['PENDING', 'PARTIAL', 'PAID', 'OVERDUE'];
 
 const TONE: Record<ProjectStatus, Tone> = {
   PLANNED: 'blue',
@@ -34,12 +31,6 @@ const TONE: Record<ProjectStatus, Tone> = {
   ON_HOLD: 'amber',
   COMPLETED: 'green',
   CANCELLED: 'red',
-};
-
-const CONTRACT_TONE: Record<ContractStatus, Tone> = {
-  PENDING: 'amber',
-  ACTIVE: 'green',
-  COMPLETED: 'gray',
 };
 
 const money = (n?: number) =>
@@ -53,23 +44,25 @@ const money = (n?: number) =>
 
 const day = (iso?: string) => (iso ? new Date(iso).toLocaleDateString() : '—');
 
+/**
+ * Company projects — internal work.
+ *
+ * Contractor engagements are NOT here: contracts, agreements and weekly
+ * reports live on the tasks a contractor is assigned. This page is simply the
+ * company's project list, with the tasks filed under each one.
+ */
 export default function ProjectsPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Only a super admin creates or edits projects. Everyone else — including
-  // the assigned contractor — gets a read-only list that opens the detail page.
   const canManage = isSuperAdminRole(user?.role);
-  const isMarketer = isMarketerRole(user?.role);
 
   const [items, setItems] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [saving, setSaving] = useState(false);
-  /** Contractor accounts, loaded lazily and only for the super admin's form. */
-  const [marketers, setMarketers] = useState<User[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -81,17 +74,6 @@ export default function ProjectsPage() {
 
   useEffect(load, [load]);
 
-  // The assignee dropdown needs the user list, which is admin-only — so fetch
-  // it only when a super admin is actually going to see the form.
-  useEffect(() => {
-    if (!canManage) return;
-    listUsers()
-      .then((users) => setMarketers(users.filter((u) => isMarketerRole(u.role))))
-      .catch(() => {
-        /* Non-fatal: the form still works, just without the assignee picker. */
-      });
-  }, [canManage]);
-
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -102,11 +84,6 @@ export default function ProjectsPage() {
       startDate: String(f.get('startDate') ?? ''),
       endDate: String(f.get('endDate') ?? ''),
       budget: Number(f.get('budget') ?? 0) || undefined,
-      assignedMarketerId: String(f.get('assignedMarketerId') ?? ''),
-      contractStatus: String(f.get('contractStatus') ?? 'PENDING') as ContractStatus,
-      contractStartDate: String(f.get('contractStartDate') ?? ''),
-      contractEndDate: String(f.get('contractEndDate') ?? ''),
-      paymentStatus: String(f.get('paymentStatus') ?? 'PENDING') as PaymentStatus,
     };
     if (!input.name) return;
 
@@ -137,8 +114,7 @@ export default function ProjectsPage() {
     if (
       !window.confirm(
         `Delete "${project.name}"?\n\n` +
-          `Its documents, deliverables and weekly reports go with it. ` +
-          `This cannot be undone.`,
+          `Tasks filed under it are kept — they're just unlinked from the project.`,
       )
     )
       return;
@@ -149,7 +125,7 @@ export default function ProjectsPage() {
       await deleteProjectApi(project.id);
       toast.info('Project deleted', project.name);
     } catch (err) {
-      setItems(prev); // rollback
+      setItems(prev);
       toast.error('Delete failed', getErrorMessage(err, 'Please try again.'));
     }
   };
@@ -171,23 +147,12 @@ export default function ProjectsPage() {
       render: (p) => <StatusBadge tone={TONE[p.status]}>{humanize(p.status)}</StatusBadge>,
     },
     {
-      key: 'contract',
-      header: 'Contract',
+      key: 'tasks',
+      header: 'Tasks',
       render: (p) => (
-        <StatusBadge tone={CONTRACT_TONE[p.contractStatus]}>
-          {humanize(p.contractStatus)}
-        </StatusBadge>
+        <span className="tabular-nums text-slate-300">{p.taskCount ?? 0}</span>
       ),
     },
-    ...(canManage
-      ? [
-          {
-            key: 'marketer',
-            header: 'Assigned to',
-            render: (p: Project) => p.assignedMarketerName ?? '—',
-          },
-        ]
-      : []),
     { key: 'budget', header: 'Budget', render: (p) => money(p.budget) },
     {
       key: 'dates',
@@ -202,11 +167,7 @@ export default function ProjectsPage() {
             header: '',
             className: 'text-right',
             render: (p: Project) => (
-              <div
-                className="flex justify-end gap-1"
-                // Stop the row's navigate-to-detail click.
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                 <RowButton
                   onClick={() => {
                     setEditing(p);
@@ -231,11 +192,7 @@ export default function ProjectsPage() {
     <div>
       <PageHeader
         title="Projects"
-        subtitle={
-          isMarketer
-            ? 'The projects you are contracted on. Open one for its documents and deliverables.'
-            : 'Plan and deliver your work.'
-        }
+        subtitle="Company projects. Open one to see the tasks filed under it."
         action={
           canManage ? (
             <Button
@@ -256,13 +213,11 @@ export default function ProjectsPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
-          title={isMarketer ? 'No projects assigned yet' : 'No projects yet'}
+          title="No projects yet"
           description={
-            isMarketer
-              ? 'Once a project is assigned to you it appears here, along with its agreement and deliverables.'
-              : canManage
-                ? 'Create a project to get started.'
-                : 'Projects are created by a super admin.'
+            canManage
+              ? 'Create a company project, then file tasks under it.'
+              : 'Projects are created by a super admin.'
           }
           action={
             canManage ? (
@@ -337,66 +292,6 @@ export default function ProjectsPage() {
               name="description"
               defaultValue={editing?.description}
             />
-
-            {/* ---------------------- contractor assignment --------------------- */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Contract
-              </p>
-
-              <div className="space-y-4">
-                <Select
-                  label="Assigned marketer"
-                  name="assignedMarketerId"
-                  defaultValue={editing?.assignedMarketerId ?? ''}
-                  options={[
-                    { value: '', label: 'Not assigned' },
-                    ...marketers.map((m) => ({
-                      value: m.id,
-                      label: `${m.name} — ${m.email}`,
-                    })),
-                  ]}
-                />
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Select
-                    label="Contract status"
-                    name="contractStatus"
-                    defaultValue={editing?.contractStatus ?? 'PENDING'}
-                    options={CONTRACT_STATUSES.map((s) => ({
-                      value: s,
-                      label: humanize(s),
-                    }))}
-                  />
-                  <Select
-                    label="Payment status"
-                    name="paymentStatus"
-                    defaultValue={editing?.paymentStatus ?? 'PENDING'}
-                    options={PAYMENT_STATUSES.map((s) => ({
-                      value: s,
-                      label: humanize(s),
-                    }))}
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Contract start"
-                    name="contractStartDate"
-                    type="date"
-                    defaultValue={editing?.contractStartDate?.slice(0, 10)}
-                    className="!pl-4"
-                  />
-                  <Input
-                    label="Contract end"
-                    name="contractEndDate"
-                    type="date"
-                    defaultValue={editing?.contractEndDate?.slice(0, 10)}
-                    className="!pl-4"
-                  />
-                </div>
-              </div>
-            </div>
 
             <div className="flex justify-end gap-3 pt-2">
               <Button

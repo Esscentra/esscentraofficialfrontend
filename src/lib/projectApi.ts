@@ -1,27 +1,17 @@
 import api from './api';
-import { downloadFromApi } from './download';
-import type {
-  ApiResponse,
-  Deliverable,
-  MarketerOverview,
-  Project,
-  ProjectDocumentCategory,
-  WeeklyReport,
-} from '@/types';
+import type { ApiResponse, Project, Task } from '@/types';
 
 /**
- * Projects — wired to the live Esscentra backend.
+ * Company projects — internal work with an owner, budget and timeline.
  *
- * Permission summary (enforced server-side, mirrored in the UI):
- *   GET    /projects                      → any project-enabled role;
- *                                           a contractor sees only their own
- *   GET    /projects/:id                  → same, plus an assignment check
- *   POST   /projects                      → SUPER_ADMIN only
- *   PATCH  /projects/:id                  → SUPER_ADMIN only
- *   DELETE /projects/:id                  → SUPER_ADMIN only
- *   POST   /projects/:id/documents        → SUPER_ADMIN only (multipart)
- *   GET    .../documents/:docId/download  → admin or the assigned contractor
- *   POST   /projects/:id/reports          → the assigned contractor
+ * Contractor engagements are NOT here: contracts, agreements, invoices and
+ * weekly reports live on the Task a contractor is assigned (see taskApi). A
+ * task may reference a project for context, nothing more.
+ *
+ * Permissions (enforced server-side):
+ *   GET    /projects, /projects/:id, /projects/:id/tasks → team roles
+ *          (the contract marketer is refused — they get Tasks only)
+ *   POST | PATCH | DELETE /projects                      → SUPER_ADMIN
  */
 
 /* --------------------------------- mapping -------------------------------- */
@@ -31,6 +21,7 @@ interface RawNamed {
   firstName?: string;
   lastName?: string;
   companyName?: string;
+  name?: string;
 }
 
 interface RawProject {
@@ -45,48 +36,13 @@ interface RawProject {
   createdAt?: string;
   ownerId?: RawNamed | string;
   accountId?: RawNamed | string;
-  assignedMarketerId?: RawNamed | string;
-  contractStatus?: Project['contractStatus'];
-  contractStartDate?: string;
-  contractEndDate?: string;
-  paymentStatus?: Project['paymentStatus'];
-  documents?: Array<Record<string, unknown>>;
-  deliverables?: Array<Record<string, unknown>>;
+  taskCount?: number;
 }
 
-/** "firstName lastName" from a populated ref, or undefined when it's just an id. */
 function personName(ref?: RawNamed | string): string | undefined {
   if (!ref || typeof ref === 'string') return undefined;
   const name = [ref.firstName, ref.lastName].filter(Boolean).join(' ').trim();
   return name || undefined;
-}
-
-function refId(ref?: RawNamed | string): string | undefined {
-  if (!ref) return undefined;
-  return typeof ref === 'string' ? ref : ref._id;
-}
-
-function mapDocument(d: Record<string, any>) {
-  return {
-    id: String(d._id ?? d.id ?? ''),
-    title: String(d.title ?? 'Document'),
-    category: (d.category ?? 'OTHER') as ProjectDocumentCategory,
-    originalName: d.originalName,
-    sizeBytes: d.sizeBytes,
-    uploadedAt: d.uploadedAt,
-    unavailable: !!d.unavailable,
-  };
-}
-
-function mapDeliverable(d: Record<string, any>): Deliverable {
-  return {
-    id: String(d._id ?? d.id ?? ''),
-    title: String(d.title ?? ''),
-    description: d.description,
-    dueDate: d.dueDate,
-    status: (d.status ?? 'PENDING') as Deliverable['status'],
-    completedAt: d.completedAt,
-  };
 }
 
 function mapProject(p: RawProject): Project {
@@ -102,32 +58,11 @@ function mapProject(p: RawProject): Project {
     ownerName: personName(p.ownerId),
     accountName:
       typeof p.accountId === 'object' ? p.accountId?.companyName : undefined,
-    assignedMarketerId: refId(p.assignedMarketerId),
-    assignedMarketerName: personName(p.assignedMarketerId),
-    contractStatus: p.contractStatus ?? 'PENDING',
-    contractStartDate: p.contractStartDate,
-    contractEndDate: p.contractEndDate,
-    paymentStatus: p.paymentStatus ?? 'PENDING',
-    documents: (p.documents ?? []).map(mapDocument),
-    deliverables: (p.deliverables ?? []).map(mapDeliverable),
+    taskCount: p.taskCount,
   };
 }
 
-function mapReport(r: Record<string, any>): WeeklyReport {
-  return {
-    id: String(r._id ?? r.id ?? ''),
-    projectId: String(r.projectId ?? ''),
-    weekStart: r.weekStart,
-    weekEnd: r.weekEnd,
-    summary: r.summary ?? '',
-    achievements: r.achievements,
-    blockers: r.blockers,
-    submittedAt: r.submittedAt,
-    marketerName: personName(r.marketerId),
-  };
-}
-
-/* --------------------------------- projects ------------------------------- */
+/* -------------------------------- projects -------------------------------- */
 
 export async function listProjects(): Promise<Project[]> {
   const { data } = await api.get<ApiResponse<RawProject[]>>('/projects');
@@ -139,6 +74,44 @@ export async function getProject(id: string): Promise<Project> {
   return mapProject(data.data);
 }
 
+/**
+ * The tasks filed under a project.
+ *
+ * Documents are stripped server-side — this is an index, not a way around the
+ * per-task permission check. Open the task itself to reach its files.
+ */
+export async function getProjectTasks(id: string): Promise<Task[]> {
+  const { data } = await api.get<ApiResponse<Array<Record<string, any>>>>(
+    `/projects/${id}/tasks`,
+  );
+
+  return (data.data ?? []).map((t) => ({
+    id: String(t._id ?? t.id ?? ''),
+    title: t.title,
+    description: t.description,
+    status: t.status ?? 'PENDING',
+    priority: t.priority ?? 'MEDIUM',
+    dueDate: t.dueDate,
+    completedAt: t.completedAt,
+    createdAt: t.createdAt,
+    assignedTo:
+      typeof t.assignedTo === 'object' ? t.assignedTo?._id : t.assignedTo,
+    assignedToName:
+      typeof t.assignedTo === 'object'
+        ? [t.assignedTo?.firstName, t.assignedTo?.lastName]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || undefined
+        : undefined,
+    projectId: id,
+    contractStatus: t.contractStatus ?? 'PENDING',
+    contractStartDate: t.contractStartDate,
+    contractEndDate: t.contractEndDate,
+    paymentStatus: t.paymentStatus ?? 'PENDING',
+    documents: [],
+  }));
+}
+
 export interface ProjectInput {
   name: string;
   description?: string;
@@ -146,22 +119,10 @@ export interface ProjectInput {
   startDate?: string;
   endDate?: string;
   budget?: number;
-  assignedMarketerId?: string;
-  contractStatus?: Project['contractStatus'];
-  contractStartDate?: string;
-  contractEndDate?: string;
-  paymentStatus?: Project['paymentStatus'];
 }
 
-/**
- * Turn empty form fields into explicit nulls.
- *
- * Dropping them instead would make clearing a field impossible: picking
- * "Not assigned" would send nothing, and the backend would keep the previous
- * marketer. Null is a real value Mongo unsets on, and "" would fail to cast
- * to a Date or ObjectId.
- */
-function clean(input: ProjectInput): Record<string, unknown> {
+/** Empty strings become nulls so a cleared date actually clears. */
+function clean(input: Partial<ProjectInput>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(input)
       .filter(([, v]) => v !== undefined)
@@ -176,7 +137,10 @@ export async function createProject(input: ProjectInput): Promise<Project> {
 }
 
 /** SUPER_ADMIN only. */
-export async function updateProject(id: string, input: ProjectInput): Promise<Project> {
+export async function updateProject(
+  id: string,
+  input: Partial<ProjectInput>,
+): Promise<Project> {
   const { data } = await api.patch<ApiResponse<RawProject>>(
     `/projects/${id}`,
     clean(input),
@@ -184,129 +148,7 @@ export async function updateProject(id: string, input: ProjectInput): Promise<Pr
   return mapProject(data.data);
 }
 
-/** SUPER_ADMIN only. */
+/** SUPER_ADMIN only. Tasks under it are unlinked, not deleted. */
 export async function deleteProject(id: string): Promise<void> {
   await api.delete(`/projects/${id}`);
-}
-
-/* -------------------------------- documents ------------------------------- */
-
-/** SUPER_ADMIN only. Sends the PDF as multipart field `document`. */
-export async function uploadProjectDocument(
-  projectId: string,
-  input: { file: File; title: string; category: ProjectDocumentCategory },
-): Promise<Project> {
-  const form = new FormData();
-  form.append('document', input.file);
-  form.append('title', input.title);
-  form.append('category', input.category);
-
-  const { data } = await api.post<ApiResponse<RawProject>>(
-    `/projects/${projectId}/documents`,
-    form,
-    // Let the browser set the multipart boundary.
-    { headers: { 'Content-Type': undefined } as never },
-  );
-  return mapProject(data.data);
-}
-
-/** SUPER_ADMIN only. */
-export async function deleteProjectDocument(
-  projectId: string,
-  documentId: string,
-): Promise<void> {
-  await api.delete(`/projects/${projectId}/documents/${documentId}`);
-}
-
-/**
- * Download a document through the API so the request carries the session and
- * the server re-checks that this caller may read it.
- */
-export async function downloadProjectDocument(
-  projectId: string,
-  documentId: string,
-  fallbackName = 'document.pdf',
-): Promise<void> {
-  await downloadFromApi(
-    `/projects/${projectId}/documents/${documentId}/download`,
-    fallbackName,
-  );
-}
-
-/* ------------------------------ deliverables ------------------------------ */
-
-export interface DeliverableInput {
-  title: string;
-  description?: string;
-  dueDate?: string;
-  status?: Deliverable['status'];
-}
-
-/** SUPER_ADMIN only. Returns the updated project. */
-export async function addDeliverable(
-  projectId: string,
-  input: DeliverableInput,
-): Promise<Project> {
-  const { data } = await api.post<ApiResponse<RawProject>>(
-    `/projects/${projectId}/deliverables`,
-    Object.fromEntries(Object.entries(input).filter(([, v]) => v !== '')),
-  );
-  return mapProject(data.data);
-}
-
-/** SUPER_ADMIN only. */
-export async function updateDeliverable(
-  projectId: string,
-  deliverableId: string,
-  input: Partial<DeliverableInput>,
-): Promise<Project> {
-  const { data } = await api.patch<ApiResponse<RawProject>>(
-    `/projects/${projectId}/deliverables/${deliverableId}`,
-    input,
-  );
-  return mapProject(data.data);
-}
-
-/** SUPER_ADMIN only. */
-export async function deleteDeliverable(
-  projectId: string,
-  deliverableId: string,
-): Promise<void> {
-  await api.delete(`/projects/${projectId}/deliverables/${deliverableId}`);
-}
-
-/* ----------------------------- weekly reports ----------------------------- */
-
-export async function listWeeklyReports(projectId: string): Promise<WeeklyReport[]> {
-  const { data } = await api.get<ApiResponse<Array<Record<string, any>>>>(
-    `/projects/${projectId}/reports`,
-  );
-  return (data.data ?? []).map(mapReport);
-}
-
-export interface WeeklyReportInput {
-  weekStart?: string;
-  summary: string;
-  achievements?: string;
-  blockers?: string;
-}
-
-/** The assigned contractor files their own report. */
-export async function submitWeeklyReport(
-  projectId: string,
-  input: WeeklyReportInput,
-): Promise<WeeklyReport> {
-  const { data } = await api.post<ApiResponse<Record<string, any>>>(
-    `/projects/${projectId}/reports`,
-    input,
-  );
-  return mapReport(data.data);
-}
-
-/* ----------------------------- marketer overview -------------------------- */
-
-/** Always scoped to the signed-in account. */
-export async function getMarketerOverview(): Promise<MarketerOverview> {
-  const { data } = await api.get<ApiResponse<MarketerOverview>>('/dashboard/marketer');
-  return data.data;
 }

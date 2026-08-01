@@ -50,8 +50,10 @@ const NAV = [
   { to: '/app/tasks', label: 'Tasks', icon: ListChecks, staffOnly: true },
   { to: '/app/contacts', label: 'Contacts', icon: Building2, staffOnly: true },
   { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare, staffOnly: true },
-  { to: '/app/blog', label: 'Blog', icon: FileText, staffOnly: true },
-  { to: '/app/newsletter', label: 'Newsletter', icon: Mail, staffOnly: true },
+  // Admin-only: authoring publishes straight to the public marketing site.
+  { to: '/app/blog', label: 'Blog', icon: FileText, adminOnly: true },
+  // Admin-only: subscriber addresses are PII and the send history names them.
+  { to: '/app/newsletter', label: 'Newsletter', icon: Mail, adminOnly: true },
   { to: '/app/roles', label: 'Roles', icon: ShieldHalf, superAdminOnly: true },
 ] as Array<{
   to: string;
@@ -80,12 +82,12 @@ export function DashboardLayout() {
 
   // Gate links by tier: Users/KYC Review = admin+, Roles = super admin only.
   // Investors (read-only stakeholders) only get the KPI overview.
-  // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) get only the pages listed
-  // for them — the check runs first so it can never be widened by a tier flag.
   const isAdmin = isAdminRole(user?.role);
   const isSuperAdmin = isSuperAdminRole(user?.role);
   const isInvestor = isInvestorRole(user?.role);
   const navItems = NAV.filter((item) => {
+    // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) get only the pages
+    // listed for them. Checked first so a tier flag can never widen it.
     if (!canAccessAppPath(user?.role, item.to)) return false;
     if (item.superAdminOnly) return isSuperAdmin;
     if (item.adminOnly) return isAdmin;
@@ -105,7 +107,7 @@ export function DashboardLayout() {
       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
       collapsed && 'lg:justify-center lg:px-0',
       isActive
-        ? 'bg-gradient-to-r from-brand-500/80 to-brand-700/70 text-white shadow'
+        ? 'bg-gradient-to-r from-brand-500/80 to-brand-700/70 !text-white shadow'
         : 'text-slate-400 hover:bg-white/[0.05] hover:text-white',
     );
   const labelClass = cn('truncate', collapsed && 'lg:hidden');

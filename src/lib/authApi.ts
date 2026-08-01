@@ -41,7 +41,15 @@ export interface RawAccount {
   profileImage?: string | null;
   avatarUrl?: string | null;
   phone?: string | null;
+  /* Author profile — the byline on any blog post this account writes. */
   bio?: string | null;
+  jobTitle?: string | null;
+  socials?: {
+    github?: string | null;
+    x?: string | null;
+    linkedin?: string | null;
+    website?: string | null;
+  } | null;
   createdAt?: string;
 }
 
@@ -60,6 +68,15 @@ export function mapAccount(raw: RawAccount): User {
     avatarUrl: raw.profileImage ?? raw.avatarUrl ?? undefined,
     phone: raw.phone ?? undefined,
     bio: raw.bio ?? undefined,
+    jobTitle: raw.jobTitle ?? undefined,
+    socials: raw.socials
+      ? {
+          github: raw.socials.github ?? undefined,
+          x: raw.socials.x ?? undefined,
+          linkedin: raw.socials.linkedin ?? undefined,
+          website: raw.socials.website ?? undefined,
+        }
+      : undefined,
     createdAt: raw.createdAt,
   };
 }

@@ -6,7 +6,6 @@ import {
   CalendarDays,
   CalendarRange,
   FileCheck2,
-  FolderKanban,
   Hourglass,
   ListChecks,
   ShieldCheck,
@@ -19,7 +18,7 @@ import { StatusBadge, humanize, type Tone } from '@/components/ui/StatusBadge';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { getMarketerOverview } from '@/lib/projectApi';
+import { getMarketerOverview } from '@/lib/taskApi';
 import { getErrorMessage } from '@/lib/utils';
 import type { ContractStatus, MarketerOverview, PaymentStatus } from '@/types';
 
@@ -62,8 +61,11 @@ const relative = (iso?: string | null) => {
  * The contract marketer's Overview.
  *
  * Everything here is scoped to the signed-in contractor by the backend — their
- * contract, their projects, their reports, their notifications. It replaces
- * the workspace card grid, which points at pages they cannot open.
+ * tasks, their reports, their notifications. It replaces the workspace card
+ * grid, which points at pages they cannot open.
+ *
+ * The tasks ARE the deliverables: "open tasks" is the count of unfinished
+ * work, and most upcoming deadlines are task due dates.
  */
 export default function MarketerDashboard() {
   const toast = useToast();
@@ -95,14 +97,14 @@ export default function MarketerDashboard() {
   if (!data) {
     return (
       <EmptyState
-        icon={FolderKanban}
+        icon={ListChecks}
         title="Overview unavailable"
         description="We couldn't load your contract details. Please refresh in a moment."
       />
     );
   }
 
-  const hasContract = !!data.currentProject;
+  const hasWork = !!data.currentTask;
 
   return (
     <div>
@@ -110,9 +112,9 @@ export default function MarketerDashboard() {
         eyebrow="Freelance performance marketer"
         title={`Welcome back, ${firstName}`}
         subtitle={
-          hasContract
+          hasWork
             ? 'Your contract at a glance, and what needs your attention next.'
-            : 'No project has been assigned to you yet.'
+            : 'No work has been assigned to you yet.'
         }
         action={
           data.contractStatus ? (
@@ -123,28 +125,28 @@ export default function MarketerDashboard() {
         }
       />
 
-      {!hasContract ? (
+      {!hasWork ? (
         <EmptyState
-          icon={FolderKanban}
+          icon={ListChecks}
           title="Nothing assigned yet"
-          description="Once a super admin assigns you to a project, your contract dates, documents and deliverables will show up here."
+          description="Once an admin assigns you a task, its contract dates, agreement and deadline show up here."
         />
       ) : (
         <div className="space-y-5">
-          {/* --------------------------- current project --------------------------- */}
+          {/* ----------------------------- current task ---------------------------- */}
           <Link
-            to={`/app/projects/${data.currentProject!.id}`}
+            to={`/app/tasks/${data.currentTask!.id}`}
             className="glass-card card-lift group flex items-start gap-4 p-5"
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-400/25 to-brand-700/10 text-brand-300 ring-1 ring-brand-500/30">
-              <FolderKanban className="h-5 w-5" />
+              <ListChecks className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Current project
+                Current task
               </p>
               <h2 className="mt-0.5 flex items-center gap-1.5 font-display text-lg font-bold text-white">
-                {data.currentProject!.name}
+                {data.currentTask!.title}
                 <span
                   className="translate-x-0 text-brand-300 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100"
                   aria-hidden
@@ -153,12 +155,14 @@ export default function MarketerDashboard() {
                 </span>
               </h2>
               <p className="mt-1 text-sm text-slate-400">
-                {humanize(data.currentProject!.status)}
-                {data.currentProject!.documentCount > 0 &&
-                  ` · ${data.currentProject!.documentCount} document${
-                    data.currentProject!.documentCount === 1 ? '' : 's'
+                {humanize(data.currentTask!.status)}
+                {data.currentTask!.projectName && ` · ${data.currentTask!.projectName}`}
+                {data.currentTask!.dueDate && ` · due ${day(data.currentTask!.dueDate)}`}
+                {data.currentTask!.documentCount > 0 &&
+                  ` · ${data.currentTask!.documentCount} document${
+                    data.currentTask!.documentCount === 1 ? '' : 's'
                   }`}
-                {data.projectCount > 1 && ` · ${data.projectCount} projects assigned`}
+                {data.taskCount > 1 && ` · ${data.taskCount} tasks assigned`}
               </p>
             </div>
           </Link>
@@ -208,7 +212,7 @@ export default function MarketerDashboard() {
             />
             <StatCard
               icon={ListChecks}
-              label="Pending deliverables"
+              label="Open tasks"
               value={data.pendingDeliverables}
               tone={data.pendingDeliverables > 0 ? 'amber' : 'green'}
               hint={`${data.completedDeliverables} of ${data.totalDeliverables} done`}
@@ -250,10 +254,15 @@ export default function MarketerDashboard() {
                       className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-white">{d.title}</p>
+                        <Link
+                          to={`/app/tasks/${d.taskId}`}
+                          className="block truncate text-sm font-medium text-white transition hover:text-brand-200"
+                        >
+                          {d.title}
+                        </Link>
                         <p className="text-xs text-slate-500">
                           {day(d.dueDate)}
-                          {d.projectName && d.type === 'DELIVERABLE' && ` · ${d.projectName}`}
+                          {d.projectName && d.type === 'TASK' && ` · ${d.projectName}`}
                         </p>
                       </div>
                       {d.overdue ? (

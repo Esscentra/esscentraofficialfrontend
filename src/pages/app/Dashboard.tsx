@@ -45,8 +45,8 @@ const CARDS: Card[] = [
   { to: '/app/tasks', label: 'Tasks', icon: ListChecks, hint: 'Your to-dos and assignments' },
   { to: '/app/contacts', label: 'Contacts', icon: Building2, hint: 'People at your accounts' },
   { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare, hint: 'Inbound contact requests' },
-  { to: '/app/blog', label: 'Blog', icon: FileText, hint: 'Write and publish posts' },
-  { to: '/app/newsletter', label: 'Newsletter', icon: Mail, hint: 'Manage subscribers' },
+  { to: '/app/blog', label: 'Blog', icon: FileText, hint: 'Write and publish posts', adminOnly: true },
+  { to: '/app/newsletter', label: 'Newsletter', icon: Mail, hint: 'Manage subscribers', adminOnly: true },
   // Admin governance
   { to: '/app/users', label: 'Users', icon: UserCog, hint: 'Manage members and roles', adminOnly: true },
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, hint: 'Verify identity submissions', adminOnly: true },
@@ -65,7 +65,8 @@ export default function Dashboard() {
   const cards = useMemo(
     () =>
       CARDS.filter((c) => {
-        // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) only get their pages.
+        // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) only get their own
+        // pages — never a card linking somewhere they'd be bounced out of.
         if (!canAccessAppPath(role, c.to)) return false;
         if (c.superAdminOnly) return isSuperAdmin;
         if (c.adminOnly) return isAdmin;

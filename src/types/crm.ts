@@ -47,50 +47,19 @@ export interface Opportunity {
 }
 
 /* --------------------------------- Project --------------------------------- */
+/**
+ * A company project: internal work with an owner, budget and timeline.
+ *
+ * Contractor engagements do NOT live here — contracts, agreements, invoices
+ * and weekly reports hang off the Task a contractor is assigned. A task may
+ * reference a project for context; the project carries no contract data.
+ */
 export type ProjectStatus =
   | 'PLANNED'
   | 'IN_PROGRESS'
   | 'ON_HOLD'
   | 'COMPLETED'
   | 'CANCELLED';
-
-/** Lifecycle of the contract with the assigned contractor. */
-export type ContractStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED';
-
-/** Where the contractor's money stands. */
-export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
-
-export type ProjectDocumentCategory = 'AGREEMENT' | 'INVOICE' | 'REPORT' | 'OTHER';
-
-export type DeliverableStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
-
-/**
- * A PDF attached to the project by a super admin.
- *
- * The storage URL is deliberately absent — the backend never sends it. Files
- * are fetched through the authenticated download endpoint so permission is
- * re-checked on every request.
- */
-export interface ProjectDocument {
-  id: string;
-  title: string;
-  category: ProjectDocumentCategory;
-  originalName?: string;
-  sizeBytes?: number;
-  uploadedAt?: string;
-  /** The file's storage account is unreachable — disable the download. */
-  unavailable?: boolean;
-}
-
-/** A unit of work owed on the project. */
-export interface Deliverable {
-  id: string;
-  title: string;
-  description?: string;
-  dueDate?: string;
-  status: DeliverableStatus;
-  completedAt?: string;
-}
 
 export interface Project {
   id: string;
@@ -106,23 +75,75 @@ export interface Project {
   ownerName?: string;
   accountName?: string;
 
-  /* ------------------------- contractor assignment ------------------------ */
-  assignedMarketerId?: string;
-  assignedMarketerName?: string;
+  /** How many tasks are filed under this project. */
+  taskCount?: number;
+}
+
+/* ----------------------------------- Task ---------------------------------- */
+export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+/** Lifecycle of the contract with the assigned contractor. */
+export type ContractStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED';
+
+/** Where the contractor's money stands. */
+export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+
+export type TaskDocumentCategory = 'AGREEMENT' | 'INVOICE' | 'REPORT' | 'OTHER';
+
+/**
+ * A PDF attached to the task by an admin.
+ *
+ * The storage URL is deliberately absent — the backend never sends it. Files
+ * are fetched through the authenticated download endpoint so permission is
+ * re-checked on every request.
+ */
+export interface TaskDocument {
+  id: string;
+  title: string;
+  category: TaskDocumentCategory;
+  originalName?: string;
+  sizeBytes?: number;
+  uploadedAt?: string;
+  /** The file's storage account is unreachable — disable the download. */
+  unavailable?: boolean;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string;
+  completedAt?: string;
+  createdAt?: string;
+
+  /** Who owes the work. For an engagement, the contract marketer. */
+  assignedTo?: string;
+  assignedToName?: string;
+  createdByName?: string;
+
+  /** Optional company project this task sits under. */
+  projectId?: string;
+  projectName?: string;
+
+  /* ------------------------------ engagement ----------------------------- */
+  // Only meaningful when the assignee is an outside contractor; internal
+  // to-dos leave these at their defaults and the UI hides them.
   contractStatus: ContractStatus;
   contractStartDate?: string;
   contractEndDate?: string;
   paymentStatus: PaymentStatus;
 
-  /** Empty for anyone who isn't an admin or the assigned contractor. */
-  documents: ProjectDocument[];
-  deliverables: Deliverable[];
+  /** Empty for anyone who isn't an admin or the assignee. */
+  documents: TaskDocument[];
 }
 
-/** A weekly progress report filed by the contractor. */
+/** A weekly progress report filed by the contractor against a task. */
 export interface WeeklyReport {
   id: string;
-  projectId: string;
+  taskId: string;
   weekStart: string;
   weekEnd: string;
   summary: string;
@@ -134,11 +155,12 @@ export interface WeeklyReport {
 
 /** A dated item the contractor's overview counts down to. */
 export interface UpcomingDeadline {
-  type: 'DELIVERABLE' | 'CONTRACT_END';
+  /** The tasks are the deliverables, so most deadlines are task due dates. */
+  type: 'TASK' | 'CONTRACT_END';
   id: string;
   title: string;
-  projectId: string;
-  projectName: string;
+  taskId: string;
+  projectName: string | null;
   dueDate: string;
   daysRemaining: number | null;
   overdue: boolean;
@@ -152,18 +174,21 @@ export interface MarketerOverview {
   daysRemaining: number | null;
   paymentStatus: PaymentStatus | null;
 
-  currentProject: {
+  currentTask: {
     id: string;
-    name: string;
+    title: string;
     description: string | null;
-    status: ProjectStatus;
-    budget: number | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: string | null;
+    projectName: string | null;
     documentCount: number;
   } | null;
-  projectCount: number;
+  taskCount: number;
 
   weeklyReportsSubmitted: number;
   lastReportWeekStart: string | null;
+  /** Unfinished tasks — the tasks ARE the deliverables. */
   pendingDeliverables: number;
   totalDeliverables: number;
   completedDeliverables: number;
@@ -179,20 +204,6 @@ export interface MarketerOverview {
     isRead: boolean;
     createdAt: string;
   }>;
-}
-
-/* ----------------------------------- Task ---------------------------------- */
-export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  dueDate?: string;
-  createdAt?: string;
 }
 
 /* --------------------------------- Contact --------------------------------- */
@@ -250,20 +261,127 @@ export interface ContactInquiry {
 }
 
 /* ----------------------------------- Blog ---------------------------------- */
-export type BlogStatus = 'DRAFT' | 'PUBLISHED';
+
+/**
+ * SCHEDULED is a distinct state, not a dated draft: a cron job flips it to
+ * PUBLISHED when the time arrives. ARCHIVED keeps the post and its URL but
+ * pulls it from every public listing.
+ */
+export type BlogStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
+
+/** A heading in the post body, used for the table of contents. */
+export interface TocEntry {
+  id: string;
+  text: string;
+  level: number;
+}
+
+/** The byline. Lives on the author's User account, not a separate record. */
+export interface BlogAuthor {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  bio?: string;
+  jobTitle?: string;
+  socials?: {
+    github?: string;
+    x?: string;
+    linkedin?: string;
+    website?: string;
+  };
+}
+
+export interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive?: boolean;
+  /** How many posts reference it — a category in use cannot be deleted. */
+  postCount?: number;
+}
+
+export interface BlogSeries {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  coverImage?: string;
+  isActive?: boolean;
+  postCount?: number;
+}
+
+/** A sibling post in the same series, for prev/next navigation. */
+export interface SeriesPost {
+  id: string;
+  title: string;
+  slug: string;
+  seriesOrder?: number;
+  readingMinutes?: number;
+  publishedAt?: string;
+}
 
 export interface BlogPost {
   id: string;
   title: string;
-  slug?: string;
+  slug: string;
   excerpt: string;
-  content: string;
+  /** GitHub-flavoured Markdown. Absent from list responses. */
+  content?: string;
+
   featuredImage?: string;
+  featuredImageAlt?: string;
+  ogImage?: string;
+
+  category?: BlogCategory;
+  categoryId?: string;
+  author?: BlogAuthor;
+  authorId?: string;
   tags: string[];
+
+  series?: BlogSeries;
+  seriesId?: string;
+  seriesOrder?: number;
+
+  seoTitle?: string;
+  seoDescription?: string;
+  /** Points search engines at the original when this is a cross-post. */
+  canonicalUrl?: string;
+
   status: BlogStatus;
-  views?: number;
   publishedAt?: string;
+  scheduledFor?: string;
+
+  /** Derived server-side from the Markdown — read-only. */
+  readingMinutes: number;
+  wordCount: number;
+  toc: TocEntry[];
+
+  /** Only returned to admins; powers the shareable draft link. */
+  previewToken?: string;
+
+  views: number;
   createdAt?: string;
+  updatedAt?: string;
+
+  /** Present only on the public single-post response. */
+  seriesPosts?: SeriesPost[];
+  related?: BlogPost[];
+}
+
+/** A tag with its usage count, from GET /blog/tags. */
+export interface BlogTag {
+  tag: string;
+  count: number;
+}
+
+/** Pagination envelope returned alongside list responses. */
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
 }
 
 /* ----------------------------------- Role ---------------------------------- */
@@ -280,4 +398,61 @@ export interface NewsletterSubscriber {
   email: string;
   isSubscribed: boolean;
   subscribedAt?: string;
+  unsubscribedAt?: string;
+  /** Last time a newsletter email actually reached this address. */
+  lastSentAt?: string;
+}
+
+export interface NewsletterStats {
+  active: number;
+  unsubscribed: number;
+  total: number;
+}
+
+/** SCHEDULED = the Tuesday/Wednesday cron. MANUAL = an admin pressed send. */
+export type CampaignSource = 'SCHEDULED' | 'MANUAL';
+
+/**
+ * SENDING   — in flight (a stuck row means the process died mid-send).
+ * COMPLETED — every subscriber was attempted.
+ * SKIPPED   — deliberately not sent; `reason` says why.
+ * FAILED    — the run broke before it could attempt anyone.
+ */
+export type CampaignStatus = 'SENDING' | 'COMPLETED' | 'SKIPPED' | 'FAILED';
+
+/** One newsletter send, including the ones that were deliberately skipped. */
+export interface NewsletterCampaign {
+  id: string;
+  blogId?: string;
+  /** Snapshotted, so history still reads correctly if the post is retitled. */
+  blogTitle?: string;
+  blogSlug?: string;
+  subject: string;
+  source: CampaignSource;
+  status: CampaignStatus;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  skippedCount: number;
+  reason?: string;
+  triggeredByName?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt?: string;
+}
+
+export interface NewsletterSettings {
+  isPaused: boolean;
+  /** Start of the current no-repeat rotation. */
+  cycleStartedAt?: string;
+}
+
+/** A rendered preview of the next email, without sending it. */
+export interface NewsletterPreview {
+  blogId: string;
+  title: string;
+  slug: string;
+  subject: string;
+  html: string;
+  recipientCount: number;
 }

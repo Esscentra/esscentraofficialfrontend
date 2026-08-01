@@ -644,3 +644,33 @@ html[data-theme='light'] .hero-banner [class*='ring-white/'],
 html[data-theme='reading'] .hero-banner [class*='ring-white/'] {
   --tw-ring-color: rgba(255, 255, 255, 0.18);
 }
+
+/* ---------------------------------------------------------------------------
+   Dividers inside themed surfaces.
+
+   `border-white/*` is already remapped for light/reading above, but Tailwind's
+   `divide-*` emits its border-color on a child combinator, so that selector
+   never matched it -- leaving list separators invisible on white cards.
+--------------------------------------------------------------------------- */
+html[data-theme='light'] [class*='divide-white/'] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(13, 27, 62, 0.09);
+}
+html[data-theme='reading'] [class*='divide-white/'] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(120, 92, 52, 0.16);
+}
+
+/* ---------------------------------------------------------------------------
+   Count badges (e.g. unread notifications) sit on top of the frosted bar; the
+   ring punches them out of it, so it has to track the bar's colour per theme.
+   A literal `ring-[#070c1a]` cannot: the [class*='#070c1a'] bar rule matches
+   it and overrides the badge's own background.
+--------------------------------------------------------------------------- */
+.badge-ring {
+  --tw-ring-color: #070c1a;
+}
+html[data-theme='light'] .badge-ring {
+  --tw-ring-color: #ffffff;
+}
+html[data-theme='reading'] .badge-ring {
+  --tw-ring-color: #f3ead6;
+}

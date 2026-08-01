@@ -22,10 +22,12 @@ import OpportunitiesPage from './pages/app/Opportunities';
 import ProjectsPage from './pages/app/Projects';
 import ProjectDetailPage from './pages/app/ProjectDetail';
 import TasksPage from './pages/app/Tasks';
+import TaskDetailPage from './pages/app/TaskDetail';
 import AccountsPage from './pages/app/Accounts';
 import ContactsPage from './pages/app/Contacts';
 import InquiriesPage from './pages/app/Inquiries';
 import BlogPage from './pages/app/Blog';
+import BlogEditorPage from './pages/app/BlogEditor';
 import NewsletterPage from './pages/app/Newsletter';
 import RolesPage from './pages/app/Roles';
 import UsersPage from './pages/app/Users';
@@ -126,11 +128,21 @@ export default function App() {
         <Route path="projects" element={<StaffRoute><ProjectsPage /></StaffRoute>} />
         {/* Project detail — read-only unless the caller is a super admin. */}
         <Route path="projects/:id" element={<StaffRoute><ProjectDetailPage /></StaffRoute>} />
+        {/* Tasks carry the contractor engagement, so the marketer reaches
+            these (via WorkspaceRoute's allowlist). Writes are admin-gated
+            server-side and the UI hides the controls. */}
         <Route path="tasks" element={<StaffRoute><TasksPage /></StaffRoute>} />
+        <Route path="tasks/:id" element={<StaffRoute><TaskDetailPage /></StaffRoute>} />
         <Route path="contacts" element={<StaffRoute><ContactsPage /></StaffRoute>} />
         <Route path="inquiries" element={<StaffRoute><InquiriesPage /></StaffRoute>} />
-        <Route path="blog" element={<StaffRoute><BlogPage /></StaffRoute>} />
-        <Route path="newsletter" element={<StaffRoute><NewsletterPage /></StaffRoute>} />
+        {/* Blog is admin-only: the listing endpoint is admin-gated, and only
+            ADMIN / SUPER_ADMIN may write to the public site. */}
+        <Route path="blog" element={<AdminRoute><BlogPage /></AdminRoute>} />
+        <Route path="blog/new" element={<AdminRoute><BlogEditorPage /></AdminRoute>} />
+        <Route path="blog/:id" element={<AdminRoute><BlogEditorPage /></AdminRoute>} />
+        {/* Newsletter is admin-only: subscriber addresses are PII and the
+            campaign history records exactly who was mailed. */}
+        <Route path="newsletter" element={<AdminRoute><NewsletterPage /></AdminRoute>} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

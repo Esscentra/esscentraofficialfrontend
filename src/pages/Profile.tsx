@@ -5,15 +5,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   BadgeCheck,
+  Briefcase,
   Camera,
+  Github,
+  Globe,
   KeyRound,
   LayoutDashboard,
+  Linkedin,
   LogOut,
   Lock,
   Mail,
   Phone,
   Save,
   ShieldCheck,
+  Twitter,
   User as UserIcon,
 } from 'lucide-react';
 import { AuroraBackground } from '@/components/AuroraBackground';
@@ -295,6 +300,12 @@ function ProfileTab() {
       firstName: u.firstName ?? '',
       lastName: u.lastName ?? '',
       phone: u.phone ?? '',
+      jobTitle: u.jobTitle ?? '',
+      bio: u.bio ?? '',
+      socialGithub: u.socials?.github ?? '',
+      socialX: u.socials?.x ?? '',
+      socialLinkedin: u.socials?.linkedin ?? '',
+      socialWebsite: u.socials?.website ?? '',
     },
   });
 
@@ -304,6 +315,12 @@ function ProfileTab() {
         firstName: values.firstName,
         lastName: values.lastName,
         phone: values.phone ?? '',
+        jobTitle: values.jobTitle ?? '',
+        bio: values.bio ?? '',
+        socialGithub: values.socialGithub ?? '',
+        socialX: values.socialX ?? '',
+        socialLinkedin: values.socialLinkedin ?? '',
+        socialWebsite: values.socialWebsite ?? '',
       });
       setUser(updated);
       toast.success('Profile saved');
@@ -339,6 +356,74 @@ function ProfileTab() {
           error={errors.phone?.message}
           {...register('phone')}
         />
+        <Input
+          label="Job title"
+          icon={<Briefcase />}
+          placeholder="Senior Backend Engineer"
+          error={errors.jobTitle?.message}
+          {...register('jobTitle')}
+        />
+      </div>
+
+      {/* --------------------------- author profile --------------------------- */}
+      {/* Everything below shows on the byline of blog posts you write. */}
+      <div className="space-y-5 border-t border-white/10 pt-6">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Author profile</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Shown on the byline and author card of any blog post you publish.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label
+            htmlFor="author-bio"
+            className="block text-xs font-medium uppercase tracking-wide text-slate-400"
+          >
+            Short bio
+          </label>
+          <textarea
+            id="author-bio"
+            rows={3}
+            placeholder="One or two sentences about what you build and write about."
+            className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-brand-400/70 focus:bg-white/[0.06] focus:ring-4 focus:ring-brand-500/20"
+            {...register('bio')}
+          />
+          {errors.bio?.message && (
+            <p className="text-xs text-rose-300">{errors.bio.message}</p>
+          )}
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Input
+            label="GitHub"
+            icon={<Github />}
+            placeholder="https://github.com/you"
+            error={errors.socialGithub?.message}
+            {...register('socialGithub')}
+          />
+          <Input
+            label="X / Twitter"
+            icon={<Twitter />}
+            placeholder="https://x.com/you"
+            error={errors.socialX?.message}
+            {...register('socialX')}
+          />
+          <Input
+            label="LinkedIn"
+            icon={<Linkedin />}
+            placeholder="https://linkedin.com/in/you"
+            error={errors.socialLinkedin?.message}
+            {...register('socialLinkedin')}
+          />
+          <Input
+            label="Website"
+            icon={<Globe />}
+            placeholder="https://yoursite.dev"
+            error={errors.socialWebsite?.message}
+            {...register('socialWebsite')}
+          />
+        </div>
       </div>
 
       {/* Read-only account fields */}

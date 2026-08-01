@@ -46,10 +46,26 @@ export const resetSchema = z
 export type ResetValues = z.infer<typeof resetSchema>;
 
 /* ---------------------------------- Profile ---------------------------------- */
+/** Blank is allowed wherever a field is optional — it means "clear this". */
+const optionalText = z.string().optional().or(z.literal(''));
+
 export const profileSchema = z.object({
   firstName: z.string().min(2, 'First name is required'),
   lastName: z.string().min(2, 'Last name is required'),
-  phone: z.string().optional().or(z.literal('')),
+  phone: optionalText,
+
+  /* --------------------------- author profile --------------------------- */
+  // Shown on the byline and author card of any blog post this account writes.
+  jobTitle: optionalText,
+  bio: z
+    .string()
+    .max(400, 'Keep the bio under 400 characters')
+    .optional()
+    .or(z.literal('')),
+  socialGithub: optionalText,
+  socialX: optionalText,
+  socialLinkedin: optionalText,
+  socialWebsite: optionalText,
 });
 export type ProfileValues = z.infer<typeof profileSchema>;
 

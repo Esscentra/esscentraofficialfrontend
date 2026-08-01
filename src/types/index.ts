@@ -12,7 +12,18 @@ export interface User {
   avatarUrl?: string;
   emailVerified: boolean;
   phone?: string;
+
+  /* ---------------------------- author profile ---------------------------- */
+  // Shown on the byline and author card of any blog post this account writes.
   bio?: string;
+  jobTitle?: string;
+  socials?: {
+    github?: string;
+    x?: string;
+    linkedin?: string;
+    website?: string;
+  };
+
   createdAt?: string;
 }
 

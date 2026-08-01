@@ -49,8 +49,14 @@ export function isInvestorRole(role?: string): boolean {
  * admin / super-admin / staff checks above.
  */
 export const RESTRICTED_ROLE_PATHS: Record<string, string[]> = {
-  // Contract marketer: their own overview plus the projects they work on.
-  FREELANCE_PERFORMANCE_MARKETER: ['/app', '/app/projects'],
+  /**
+   * Contract marketer: their own overview plus the tasks assigned to them.
+   *
+   * Deliberately NOT `/app/projects` — company projects are internal. The
+   * whole engagement (contract, agreements, deadlines, weekly reports) hangs
+   * off their tasks instead.
+   */
+  FREELANCE_PERFORMANCE_MARKETER: ['/app', '/app/tasks'],
 };
 
 /** The outside contract-marketer role, by its canonical name. */
