@@ -35,6 +35,36 @@ import KycReviewPage from './pages/app/KycReview';
 import InvestmentsPage from './pages/app/Investments';
 import CommitmentsPage from './pages/app/Commitments';
 
+/* ------------------------- investor workspace ------------------------- */
+// The read-only stakeholder's own dashboard: their position, the company's
+// performance, and the paperwork behind both.
+import InvestorOverviewPage from './pages/app/investor/Overview';
+import InvestorRecordsPage from './pages/app/InvestorDashboard';
+import InvestorTimelinePage from './pages/app/investor/Timeline';
+import InvestorValuationPage from './pages/app/investor/Valuation';
+import InvestorRevenuePage from './pages/app/investor/Revenue';
+import InvestorExpensesPage from './pages/app/investor/Expenses';
+import InvestorProfitPage from './pages/app/investor/Profit';
+import InvestorReportsPage from './pages/app/investor/Reports';
+import InvestorRoiPage from './pages/app/investor/Roi';
+import InvestorEquityPage from './pages/app/investor/EquityProgress';
+import InvestorShareValuePage from './pages/app/investor/ShareValue';
+import InvestorFundUsagePage from './pages/app/investor/FundUsage';
+import InvestorPaymentsPage from './pages/app/investor/PaymentHistory';
+import InvestorDocumentsPage from './pages/app/investor/Documents';
+import InvestorNotificationsPage from './pages/app/investor/Notifications';
+import InvestorProfilePage from './pages/app/investor/Profile';
+import InvestorSettingsPage from './pages/app/investor/Settings';
+
+/* --------------------------- finance admin ---------------------------- */
+// Where the numbers the investor sees are actually recorded.
+import RevenueAdminPage from './pages/app/finance/RevenueAdmin';
+import ExpensesAdminPage from './pages/app/finance/ExpensesAdmin';
+import ValuationAdminPage from './pages/app/finance/ValuationAdmin';
+import DistributionsPage from './pages/app/finance/Distributions';
+import DocumentsAdminPage from './pages/app/finance/DocumentsAdmin';
+import AuditLogPage from './pages/app/finance/AuditLog';
+
 export default function App() {
   return (
     <Routes>
@@ -118,6 +148,39 @@ export default function App() {
         <Route path="kyc-review" element={<AdminRoute><KycReviewPage /></AdminRoute>} />
         <Route path="investments" element={<AdminRoute><InvestmentsPage /></AdminRoute>} />
         <Route path="commitments" element={<AdminRoute><CommitmentsPage /></AdminRoute>} />
+
+        {/* Finance administration — recording the figures investors read.
+            Admin-gated on the server too; these guards only hide the UI. */}
+        <Route path="finance/revenue" element={<AdminRoute><RevenueAdminPage /></AdminRoute>} />
+        <Route path="finance/expenses" element={<AdminRoute><ExpensesAdminPage /></AdminRoute>} />
+        <Route path="finance/valuation" element={<AdminRoute><ValuationAdminPage /></AdminRoute>} />
+        <Route path="finance/distributions" element={<AdminRoute><DistributionsPage /></AdminRoute>} />
+        <Route path="finance/documents" element={<AdminRoute><DocumentsAdminPage /></AdminRoute>} />
+        <Route path="finance/audit" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
+
+        {/* Investor workspace. Not behind AdminRoute or StaffRoute — this IS
+            the investor's area. WorkspaceRoute's allowlist keeps other
+            narrow-surface roles out, and every endpoint behind these pages is
+            scoped to the calling investor server-side. */}
+        <Route path="investor" element={<InvestorOverviewPage />} />
+        {/* The original records view, preserved: commitments, invoices and
+            how the investor's own funds were spent. */}
+        <Route path="investor/records" element={<InvestorRecordsPage />} />
+        <Route path="investor/fund-usage" element={<InvestorFundUsagePage />} />
+        <Route path="investor/timeline" element={<InvestorTimelinePage />} />
+        <Route path="investor/valuation" element={<InvestorValuationPage />} />
+        <Route path="investor/revenue" element={<InvestorRevenuePage />} />
+        <Route path="investor/expenses" element={<InvestorExpensesPage />} />
+        <Route path="investor/profit" element={<InvestorProfitPage />} />
+        <Route path="investor/reports" element={<InvestorReportsPage />} />
+        <Route path="investor/roi" element={<InvestorRoiPage />} />
+        <Route path="investor/equity" element={<InvestorEquityPage />} />
+        <Route path="investor/share-value" element={<InvestorShareValuePage />} />
+        <Route path="investor/payments" element={<InvestorPaymentsPage />} />
+        <Route path="investor/documents" element={<InvestorDocumentsPage />} />
+        <Route path="investor/notifications" element={<InvestorNotificationsPage />} />
+        <Route path="investor/profile" element={<InvestorProfilePage />} />
+        <Route path="investor/settings" element={<InvestorSettingsPage />} />
         {/* Super-admin only: managing role types */}
         <Route path="roles" element={<SuperAdminRoute><RolesPage /></SuperAdminRoute>} />
 

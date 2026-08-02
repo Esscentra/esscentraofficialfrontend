@@ -271,7 +271,8 @@ html[data-theme='reading'] .aurora-noise {
 
 /* Frosted bars (sidebar / topbar / sticky headers). */
 html[data-theme='light'] .app-bar,
-html[data-theme='light'] [class*='#070c1a'] {
+html[data-theme='light'] [class*='#070c1a'],
+html[data-theme='light'] [class*='#0a1122'] {
   background-color: rgba(255, 255, 255, 0.82) !important;
 }
 
@@ -407,7 +408,8 @@ html[data-theme='reading'] .bg-grid-faint {
 }
 
 html[data-theme='reading'] .app-bar,
-html[data-theme='reading'] [class*='#070c1a'] {
+html[data-theme='reading'] [class*='#070c1a'],
+html[data-theme='reading'] [class*='#0a1122'] {
   background-color: rgba(248, 241, 226, 0.8) !important;
 }
 
@@ -674,3 +676,74 @@ html[data-theme='light'] .badge-ring {
 html[data-theme='reading'] .badge-ring {
   --tw-ring-color: #f3ead6;
 }
+
+/* ---------------------------------------------------------------------------
+   Light accent shades (…-100 / …-200) on light & reading themes.
+
+   The accent remaps above cover the -200/-300 shades that existed when they
+   were written, but the finance surfaces also use the paler -100/-200 tints —
+   e.g. the valuation warning note's `text-amber-200`. Pale amber on a white
+   card is unreadable, so darken every such shade to the same anchors the
+   -300 remaps use. The dark surfaces that keep light-on-dark text in every
+   theme (hero banner, brand panel, toasts) re-lighten below, exactly as they
+   already do for slate and brand.
+--------------------------------------------------------------------------- */
+html[data-theme='light'] [class*='text-amber-1'],
+html[data-theme='light'] [class*='text-amber-2'] { color: #92400e; }
+html[data-theme='light'] [class*='text-emerald-1'] { color: #047857; }
+html[data-theme='light'] [class*='text-sky-1'],
+html[data-theme='light'] [class*='text-sky-2'] { color: #0369a1; }
+html[data-theme='light'] [class*='text-rose-1'],
+html[data-theme='light'] [class*='text-rose-2'] { color: #be123c; }
+html[data-theme='light'] [class*='text-violet-1'],
+html[data-theme='light'] [class*='text-violet-2'] { color: #6d28d9; }
+html[data-theme='light'] [class*='text-teal-1'],
+html[data-theme='light'] [class*='text-teal-2'] { color: #0f766e; }
+html[data-theme='light'] [class*='text-brand-1'] { color: #064ce2; }
+
+html[data-theme='reading'] [class*='text-amber-1'],
+html[data-theme='reading'] [class*='text-amber-2'] { color: #8a5313; }
+html[data-theme='reading'] [class*='text-emerald-1'] { color: #2f7d52; }
+html[data-theme='reading'] [class*='text-sky-1'],
+html[data-theme='reading'] [class*='text-sky-2'] { color: #1f6f99; }
+html[data-theme='reading'] [class*='text-rose-1'],
+html[data-theme='reading'] [class*='text-rose-2'] { color: #b03a4a; }
+html[data-theme='reading'] [class*='text-violet-1'],
+html[data-theme='reading'] [class*='text-violet-2'] { color: #6d4aa8; }
+html[data-theme='reading'] [class*='text-teal-1'],
+html[data-theme='reading'] [class*='text-teal-2'] { color: #1f7a6d; }
+html[data-theme='reading'] [class*='text-brand-1'] { color: #064ce2; }
+
+/* Dark-in-every-theme surfaces keep their pale accent text readable. The
+   scoped selectors are more specific than the global remaps above, so they
+   win regardless of order. */
+html[data-theme='light'] .hero-banner [class*='text-amber-1'],
+html[data-theme='reading'] .hero-banner [class*='text-amber-1'],
+html[data-theme='light'] .brand-panel [class*='text-amber-1'],
+html[data-theme='reading'] .brand-panel [class*='text-amber-1'],
+html[data-theme='light'] .toast-card [class*='text-amber-1'],
+html[data-theme='reading'] .toast-card [class*='text-amber-1'] { color: #fef3c7; }
+
+html[data-theme='light'] .hero-banner [class*='text-amber-2'],
+html[data-theme='reading'] .hero-banner [class*='text-amber-2'],
+html[data-theme='light'] .brand-panel [class*='text-amber-2'],
+html[data-theme='reading'] .brand-panel [class*='text-amber-2'],
+html[data-theme='light'] .toast-card [class*='text-amber-2'],
+html[data-theme='reading'] .toast-card [class*='text-amber-2'] { color: #fde68a; }
+
+html[data-theme='light'] .hero-banner [class*='text-emerald-1'],
+html[data-theme='reading'] .hero-banner [class*='text-emerald-1'],
+html[data-theme='light'] .hero-banner [class*='text-emerald-2'],
+html[data-theme='reading'] .hero-banner [class*='text-emerald-2'],
+html[data-theme='light'] .brand-panel [class*='text-emerald-2'],
+html[data-theme='reading'] .brand-panel [class*='text-emerald-2'] { color: #a7f3d0; }
+
+html[data-theme='light'] .hero-banner [class*='text-rose-1'],
+html[data-theme='reading'] .hero-banner [class*='text-rose-1'],
+html[data-theme='light'] .hero-banner [class*='text-rose-2'],
+html[data-theme='reading'] .hero-banner [class*='text-rose-2'] { color: #fecdd3; }
+
+html[data-theme='light'] .hero-banner [class*='text-brand-1'],
+html[data-theme='reading'] .hero-banner [class*='text-brand-1'],
+html[data-theme='light'] .brand-panel [class*='text-brand-1'],
+html[data-theme='reading'] .brand-panel [class*='text-brand-1'] { color: #d9e7ff; }

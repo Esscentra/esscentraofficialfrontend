@@ -26,7 +26,7 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:p-6"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -37,7 +37,7 @@ export function Modal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-card relative z-10 my-8 w-full max-w-lg p-6 sm:p-7"
+            className="glass-card relative z-10 my-4 w-full max-w-lg p-4 sm:my-8 sm:p-7"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-white">{title}</h2>

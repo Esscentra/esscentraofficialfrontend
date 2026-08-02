@@ -2,11 +2,18 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
+  BarChart3,
+  Bell,
   Building,
   Building2,
+  Calculator,
+  CalendarClock,
+  Coins,
   FileText,
+  FolderArchive,
   FolderKanban,
   HandCoins,
+  History,
   IndianRupee,
   LayoutDashboard,
   ListChecks,
@@ -16,11 +23,17 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  PieChart,
+  Receipt,
+  Settings,
   ShieldCheck,
   ShieldHalf,
+  TrendingUp,
+  Trophy,
   UserCircle,
   UserCog,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 import { AuroraBackground } from './AuroraBackground';
@@ -40,9 +53,37 @@ import {
 
 const NAV = [
   { to: '/app', label: 'Overview', icon: LayoutDashboard, end: true },
+
+  /* ------------------------- investor workspace ------------------------- */
+  // Shown only to the INVESTOR role. Ordered to follow the money: what they
+  // put in, what the company did with it, what it is worth, what they are owed.
+  { to: '/app/investor/timeline', label: 'My investments', icon: CalendarClock, investorOnly: true },
+  { to: '/app/investor/equity', label: 'Equity progress', icon: PieChart, investorOnly: true },
+  { to: '/app/investor/revenue', label: 'Revenue', icon: IndianRupee, investorOnly: true },
+  { to: '/app/investor/expenses', label: 'Expenses', icon: Wallet, investorOnly: true },
+  { to: '/app/investor/profit', label: 'Profit', icon: TrendingUp, investorOnly: true },
+  { to: '/app/investor/valuation', label: 'Valuation', icon: Building2, investorOnly: true },
+  { to: '/app/investor/share-value', label: 'Share value', icon: Trophy, investorOnly: true },
+  { to: '/app/investor/roi', label: 'ROI', icon: Calculator, investorOnly: true },
+  { to: '/app/investor/payments', label: 'Payments', icon: Coins, investorOnly: true },
+  { to: '/app/investor/reports', label: 'Reports', icon: BarChart3, investorOnly: true },
+  { to: '/app/investor/documents', label: 'Documents', icon: FolderArchive, investorOnly: true },
+  { to: '/app/investor/fund-usage', label: 'Fund usage', icon: Receipt, investorOnly: true },
+  { to: '/app/investor/notifications', label: 'Notifications', icon: Bell, investorOnly: true },
+  { to: '/app/investor/profile', label: 'My profile', icon: UserCircle, investorOnly: true },
+  { to: '/app/investor/settings', label: 'Settings', icon: Settings, investorOnly: true },
+
+  /* --------------------------- finance admin ---------------------------- */
+  { to: '/app/finance/revenue', label: 'Revenue', icon: IndianRupee, adminOnly: true },
+  { to: '/app/finance/expenses', label: 'Expenses', icon: Wallet, adminOnly: true },
+  { to: '/app/finance/valuation', label: 'Valuation', icon: Building2, adminOnly: true },
+  { to: '/app/finance/distributions', label: 'Distributions', icon: Coins, adminOnly: true },
+  { to: '/app/finance/documents', label: 'Investor docs', icon: FolderArchive, adminOnly: true },
+  { to: '/app/finance/audit', label: 'Audit trail', icon: History, adminOnly: true },
+
   { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
-  { to: '/app/investments', label: 'Investments', icon: IndianRupee, adminOnly: true },
+  { to: '/app/investments', label: 'Investments', icon: Receipt, adminOnly: true },
   { to: '/app/commitments', label: 'Commitments', icon: HandCoins, adminOnly: true },
   { to: '/app/leads', label: 'Leads', icon: Users, staffOnly: true },
   { to: '/app/accounts', label: 'Accounts', icon: Building, staffOnly: true },
@@ -63,6 +104,7 @@ const NAV = [
   adminOnly?: boolean;
   superAdminOnly?: boolean;
   staffOnly?: boolean;
+  investorOnly?: boolean;
 }>;
 
 const SIDEBAR_KEY = 'esscentra.sidebar.collapsed';
@@ -91,6 +133,9 @@ export function DashboardLayout() {
     if (!canAccessAppPath(user?.role, item.to)) return false;
     if (item.superAdminOnly) return isSuperAdmin;
     if (item.adminOnly) return isAdmin;
+    // The investor workspace is theirs alone — an admin inspecting an
+    // investor does it from the finance screens, not by borrowing their nav.
+    if (item.investorOnly) return isInvestor;
     if (item.staffOnly) return !isInvestor;
     return true;
   });

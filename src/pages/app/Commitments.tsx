@@ -27,6 +27,13 @@ import { getErrorMessage } from '@/lib/utils';
 import { listUsers } from '@/lib/adminApi';
 import { createInvestment } from '@/lib/investmentApi';
 import {
+  downloadInvoicePdf,
+  listInvoices,
+  type InvoiceRecord,
+} from '@/lib/invoiceApi';
+import { updateInvestment } from '@/lib/investmentApi';
+import {
+  linkExpenseInvoice,
   listCommitments,
   getCommitment,
   createCommitment,
@@ -120,6 +127,7 @@ export default function CommitmentsPage() {
   const [showPayForm, setShowPayForm] = useState(false);
   const [showExpForm, setShowExpForm] = useState(false);
   const [runningDue, setRunningDue] = useState(false);
+  const [invoiceDocs, setInvoiceDocs] = useState<InvoiceRecord[]>([]);
 
   /* ------------------------------- Load data ------------------------------- */
   const reloadList = useCallback(() => {
@@ -149,6 +157,49 @@ export default function CommitmentsPage() {
       on = false;
     };
   }, [toast]);
+
+  // Generated invoices for the pickers, fetched once the first detail opens.
+  useEffect(() => {
+    if (!detail || invoiceDocs.length > 0) return;
+    listInvoices({ limit: 200 })
+      .then((result) => setInvoiceDocs(result.rows))
+      .catch(() => undefined);
+  }, [detail, invoiceDocs.length]);
+
+  const invoiceOptions = useMemo(
+    () => [
+      { value: '', label: 'No linked invoice' },
+      ...invoiceDocs.map((doc) => ({
+        value: doc._id,
+        label: `${doc.number} — ${doc.partyName} · ${inr.format(doc.total)}`,
+      })),
+    ],
+    [invoiceDocs],
+  );
+
+  /** Attach / change / remove ('' clears) a payment's linked invoice. */
+  const onChangePaymentInvoice = async (paymentId: string, invoiceId: string) => {
+    if (!detail) return;
+    try {
+      await updateInvestment(paymentId, { invoiceId });
+      toast.success(invoiceId ? 'Invoice linked' : 'Invoice unlinked');
+      await refreshDetail(detail.id);
+    } catch (err) {
+      toast.error('Could not update the link', getErrorMessage(err));
+    }
+  };
+
+  /** Attach / change / remove a linked invoice on an expense. */
+  const onChangeExpenseInvoice = async (expenseId: string, invoiceId: string) => {
+    if (!detail) return;
+    try {
+      await linkExpenseInvoice(expenseId, invoiceId || null);
+      toast.success(invoiceId ? 'Invoice linked' : 'Invoice unlinked');
+      await refreshDetail(detail.id);
+    } catch (err) {
+      toast.error('Could not update the link', getErrorMessage(err));
+    }
+  };
 
   const investorOptions = useMemo(() => {
     const sorted = [...users].sort((a, b) => {
@@ -256,6 +307,7 @@ export default function CommitmentsPage() {
         investedAt: String(f.get('investedAt') ?? ''),
         notes: String(f.get('notes') ?? ''),
         invoice: invoice instanceof File && invoice.size > 0 ? invoice : undefined,
+        invoiceId: String(f.get('invoiceId') ?? ''),
       });
       toast.success('Installment recorded', 'The investor sees it (and its invoice) instantly.');
       setShowPayForm(false);
@@ -283,6 +335,7 @@ export default function CommitmentsPage() {
         description: String(f.get('description') ?? ''),
         spentAt: String(f.get('spentAt') ?? ''),
         attachments: proofs,
+        invoiceId: String(f.get('invoiceId') ?? '') || undefined,
       });
       toast.success('Expense recorded');
       setShowExpForm(false);
@@ -623,6 +676,12 @@ export default function CommitmentsPage() {
                     <Input label="Date" name="investedAt" type="date" className="[color-scheme:dark]" />
                   </div>
                   <Input label="Notes" name="notes" placeholder="First installment" />
+                  <Select
+                    label="Link a generated invoice (optional)"
+                    name="invoiceId"
+                    defaultValue=""
+                    options={invoiceOptions}
+                  />
                   <FileField
                     label="Invoice PDF (optional)"
                     name="invoice"
@@ -650,6 +709,33 @@ export default function CommitmentsPage() {
                           {p.notes ? ` · ${p.notes}` : ''}
                         </p>
                       </div>
+                      {p.invoiceDoc && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void downloadInvoicePdf(
+                              p.invoiceDoc!.id,
+                              `${p.invoiceDoc!.number}.pdf`,
+                            ).catch((err) => toast.error('Download failed', getErrorMessage(err)))
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 font-mono text-[11px] font-semibold text-brand-300 transition hover:bg-brand-500/10"
+                          title={`Download ${p.invoiceDoc.number}.pdf`}
+                        >
+                          <Download className="h-3 w-3" /> {p.invoiceDoc.number}
+                        </button>
+                      )}
+                      <select
+                        value={p.invoiceDoc?.id ?? ''}
+                        onChange={(e) => void onChangePaymentInvoice(p.id, e.target.value)}
+                        className="select-field h-7 max-w-[130px] rounded-lg border border-white/10 bg-white/[0.05] px-1.5 text-[11px] text-slate-300 outline-none"
+                        title="Attach, change or remove the linked invoice"
+                      >
+                        {invoiceOptions.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
                       {p.invoiceUrl ? (
                         <span className="flex items-center gap-1">
                           <a
@@ -723,6 +809,12 @@ export default function CommitmentsPage() {
                       The investor will see and can download these proof files.
                     </p>
                   </div>
+                  <Select
+                    label="Link a generated invoice (optional)"
+                    name="invoiceId"
+                    defaultValue=""
+                    options={invoiceOptions}
+                  />
                   <p className="text-xs text-slate-500">
                     Available balance: <span className="text-emerald-300">{inr.format(detail.balanceAvailable)}</span>{' '}
                     — expenses can't exceed received funds.
@@ -754,6 +846,33 @@ export default function CommitmentsPage() {
                           {x.description ? ` · ${x.description}` : ''}
                         </p>
                       </div>
+                      {x.invoiceDoc && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void downloadInvoicePdf(
+                              x.invoiceDoc!.id,
+                              `${x.invoiceDoc!.number}.pdf`,
+                            ).catch((err) => toast.error('Download failed', getErrorMessage(err)))
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 font-mono text-[11px] font-semibold text-brand-300 transition hover:bg-brand-500/10"
+                          title={`Download ${x.invoiceDoc.number}.pdf`}
+                        >
+                          <Download className="h-3 w-3" /> {x.invoiceDoc.number}
+                        </button>
+                      )}
+                      <select
+                        value={x.invoiceDoc?.id ?? ''}
+                        onChange={(e) => void onChangeExpenseInvoice(x.id, e.target.value)}
+                        className="select-field h-7 max-w-[130px] rounded-lg border border-white/10 bg-white/[0.05] px-1.5 text-[11px] text-slate-300 outline-none"
+                        title="Attach, change or remove the linked invoice"
+                      >
+                        {invoiceOptions.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
                       {x.attachments.length > 0 && (
                         <span className="flex items-center gap-0.5">
                           {x.attachments.map((a, i) => (

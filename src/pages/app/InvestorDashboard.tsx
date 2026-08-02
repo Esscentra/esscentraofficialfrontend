@@ -25,6 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getDashboardStats, type DashboardStats } from '@/lib/dashboardApi';
 import { listMyInvestments, type MyInvestments } from '@/lib/investmentApi';
 import { downloadUrlAsFile } from '@/lib/download';
+import { downloadInvoicePdf } from '@/lib/invoiceApi';
 import {
   listMyCommitments,
   downloadExpenseAttachment,
@@ -331,6 +332,21 @@ export default function InvestorDashboard() {
                                 : ''}
                             </span>
                           </span>
+                          {x.invoiceDoc && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void downloadInvoicePdf(
+                                  x.invoiceDoc!.id,
+                                  `${x.invoiceDoc!.number}.pdf`,
+                                ).catch(() => undefined)
+                              }
+                              className="inline-flex shrink-0 items-center gap-1 rounded-lg px-1.5 py-0.5 font-mono text-[10px] font-semibold text-brand-300 transition hover:bg-brand-500/10"
+                              title={`Download ${x.invoiceDoc.number}.pdf`}
+                            >
+                              <Download className="h-3 w-3" /> {x.invoiceDoc.number}
+                            </button>
+                          )}
                           {x.attachments.length > 0 && (
                             <span className="flex shrink-0 items-center gap-0.5">
                               {x.attachments.map((a, i) =>
@@ -435,6 +451,21 @@ export default function InvestorDashboard() {
                     {inv.notes ? ` · ${inv.notes}` : ''}
                   </p>
                 </div>
+                {inv.invoiceDoc && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void downloadInvoicePdf(
+                        inv.invoiceDoc!.id,
+                        `${inv.invoiceDoc!.number}.pdf`,
+                      ).catch(() => undefined)
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-1.5 font-mono text-xs font-semibold text-brand-200 transition hover:bg-brand-500/20"
+                    title={`Download ${inv.invoiceDoc.number}.pdf`}
+                  >
+                    <Download className="h-3.5 w-3.5" /> {inv.invoiceDoc.number}
+                  </button>
+                )}
                 {inv.invoiceUrl && !inv.invoiceAvailable ? (
                   <span
                     title="Stored on a media account that is no longer connected"
@@ -470,7 +501,7 @@ export default function InvestorDashboard() {
                       <Download className="h-3.5 w-3.5" /> Download
                     </button>
                   </span>
-                ) : (
+                ) : inv.invoiceDoc ? null : (
                   <span className="text-xs text-slate-500">Invoice pending</span>
                 )}
               </li>

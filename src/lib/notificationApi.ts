@@ -10,6 +10,14 @@ export type NotificationType =
   | 'KYC_APPROVED'
   | 'KYC_REJECTED'
   | 'INVESTMENT_DUE'
+  /* --------------------------- investor finance --------------------------- */
+  // Capital in, profit out, and the events that move the value of a stake.
+  | 'INVESTMENT_RECEIVED'
+  | 'PROFIT_CREDITED'
+  | 'VALUATION_UPDATED'
+  | 'REVENUE_MILESTONE'
+  | 'AGREEMENT_UPDATED'
+  | 'DOCUMENT_UPLOADED'
   | 'SYSTEM';
 
 interface RawNotification {

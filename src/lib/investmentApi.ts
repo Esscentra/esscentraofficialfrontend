@@ -30,6 +30,38 @@ interface RawCommitmentRef {
   committedAmount?: number;
 }
 
+/** Populated generated-invoice link (the Invoices module). */
+export interface RawInvoiceDocRef {
+  _id?: string;
+  id?: string;
+  number?: string;
+  kind?: 'INVOICE' | 'BILL' | string;
+  status?: string;
+  total?: number;
+}
+
+/** A generated invoice/bill linked to a record, downloadable via /invoices/:id/pdf. */
+export interface InvoiceDocRef {
+  id: string;
+  number: string;
+  kind: string;
+  total?: number;
+}
+
+export function mapInvoiceDoc(
+  raw?: RawInvoiceDocRef | string | null,
+): InvoiceDocRef | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const id = raw.id ?? raw._id ?? '';
+  if (!id) return undefined;
+  return {
+    id,
+    number: raw.number ?? 'Invoice',
+    kind: raw.kind ?? 'INVOICE',
+    total: raw.total,
+  };
+}
+
 interface RawInvestment {
   _id?: string;
   id?: string;
@@ -44,6 +76,7 @@ interface RawInvestment {
   /** Backend flag: the invoice file's storage account is no longer connected. */
   invoiceUnavailable?: boolean;
   invoiceUploadedAt?: string;
+  invoiceId?: RawInvoiceDocRef | string;
   createdAt?: string;
 }
 
@@ -68,6 +101,8 @@ export interface Investment {
   /** False when the invoice file's storage account is no longer connected. */
   invoiceAvailable: boolean;
   invoiceUploadedAt?: string;
+  /** Generated invoice/bill linked to this record. */
+  invoiceDoc?: InvoiceDocRef;
   createdAt?: string;
 }
 
@@ -101,6 +136,7 @@ function mapInvestment(raw: RawInvestment): Investment {
     invoiceName: raw.invoiceOriginalName,
     invoiceAvailable: !!raw.invoiceUrl && !raw.invoiceUnavailable,
     invoiceUploadedAt: raw.invoiceUploadedAt,
+    invoiceDoc: mapInvoiceDoc(raw.invoiceId),
     createdAt: raw.createdAt,
   };
 }
@@ -138,6 +174,8 @@ export interface InvestmentInput {
   notes?: string;
   /** Optional invoice/receipt PDF. */
   invoice?: File;
+  /** Generated invoice/bill to link ('' unlinks). */
+  invoiceId?: string;
 }
 
 function toForm(input: Partial<InvestmentInput>): FormData {
@@ -148,6 +186,7 @@ function toForm(input: Partial<InvestmentInput>): FormData {
   if (input.investedAt) form.append('investedAt', input.investedAt);
   if (input.notes !== undefined) form.append('notes', input.notes);
   if (input.invoice) form.append('invoice', input.invoice);
+  if (input.invoiceId !== undefined) form.append('invoiceId', input.invoiceId);
   return form;
 }
 

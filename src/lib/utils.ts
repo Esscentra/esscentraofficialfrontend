@@ -57,6 +57,17 @@ export const RESTRICTED_ROLE_PATHS: Record<string, string[]> = {
    * off their tasks instead.
    */
   FREELANCE_PERFORMANCE_MARKETER: ['/app', '/app/tasks'],
+
+  /**
+   * Read-only stakeholder: their investor dashboard and nothing else.
+   *
+   * `/app/investor` covers every child route, so new investor pages are
+   * reachable without editing this list — while the admin areas (users, KYC
+   * review, revenue entry, distributions) stay out of reach even if the URL
+   * is typed by hand. The matching server-side gate is `resolveInvestorId`,
+   * which is what actually stops one investor reading another's position.
+   */
+  INVESTOR: ['/app', '/app/investor'],
 };
 
 /** The outside contract-marketer role, by its canonical name. */

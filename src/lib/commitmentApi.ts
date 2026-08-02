@@ -1,7 +1,8 @@
 import api from './api';
 import { downloadFromApi } from './download';
 import type { ApiResponse } from '@/types';
-import type { Investment, InvestorRef } from './investmentApi';
+import type { Investment, InvestorRef, InvoiceDocRef, RawInvoiceDocRef } from './investmentApi';
+import { mapInvoiceDoc } from './investmentApi';
 
 /* ------------------------------ Commitments ------------------------------ */
 /**
@@ -49,6 +50,7 @@ interface RawExpense {
   description?: string;
   spentAt?: string;
   attachments?: RawAttachment[];
+  invoiceId?: RawInvoiceDocRef | string;
   createdAt?: string;
 }
 
@@ -61,6 +63,7 @@ interface RawPayment {
   invoiceUrl?: string;
   invoiceOriginalName?: string;
   invoiceUnavailable?: boolean;
+  invoiceId?: RawInvoiceDocRef | string;
 }
 
 interface RawCommitment {
@@ -110,6 +113,8 @@ export interface CommitmentExpense {
   description?: string;
   spentAt?: string;
   attachments: ExpenseAttachment[];
+  /** Generated invoice/bill linked to this expense. */
+  invoiceDoc?: InvoiceDocRef;
 }
 
 export interface CommitmentPayment {
@@ -121,6 +126,8 @@ export interface CommitmentPayment {
   invoiceName?: string;
   /** False when the invoice file's storage account is no longer connected. */
   invoiceAvailable: boolean;
+  /** Generated invoice/bill linked to this payment. */
+  invoiceDoc?: InvoiceDocRef;
 }
 
 export interface Commitment {
@@ -185,6 +192,7 @@ function mapCommitment(raw: RawCommitment): Commitment {
       invoiceUrl: p.invoiceUrl,
       invoiceName: p.invoiceOriginalName,
       invoiceAvailable: !!p.invoiceUrl && !p.invoiceUnavailable,
+      invoiceDoc: mapInvoiceDoc(p.invoiceId),
     })),
     expenses: raw.expenses?.map((e) => ({
       id: e.id ?? e._id ?? '',
@@ -198,6 +206,7 @@ function mapCommitment(raw: RawCommitment): Commitment {
         name: a.originalName || `proof-${i + 1}`,
         available: !a.unavailable,
       })),
+      invoiceDoc: mapInvoiceDoc(e.invoiceId),
     })),
   };
 }
@@ -370,6 +379,8 @@ export interface ExpenseInput {
   spentAt?: string;
   /** Proof files: screenshots, bank receipts, invoice bills (PNG/JPG/PDF, max 5). */
   attachments?: File[];
+  /** Generated invoice/bill to link. */
+  invoiceId?: string;
 }
 
 /**
@@ -382,6 +393,7 @@ export async function addExpense(commitmentId: string, input: ExpenseInput): Pro
   if (input.category) form.append('category', input.category);
   if (input.description) form.append('description', input.description);
   if (input.spentAt) form.append('spentAt', input.spentAt);
+  if (input.invoiceId) form.append('invoiceId', input.invoiceId);
   for (const f of input.attachments ?? []) form.append('attachments', f);
 
   await api.post(`/commitments/${commitmentId}/expenses`, form, {
@@ -415,6 +427,17 @@ export async function downloadCommitmentInvoice(
 /** DELETE /commitments/expenses/:expenseId  (admin) */
 export async function deleteExpense(expenseId: string): Promise<void> {
   await api.delete(`/commitments/expenses/${expenseId}`);
+}
+
+/**
+ * PATCH /commitments/expenses/:expenseId/invoice  (admin) — attach, change or
+ * remove (null) the generated invoice linked to an expense.
+ */
+export async function linkExpenseInvoice(
+  expenseId: string,
+  invoiceId: string | null,
+): Promise<void> {
+  await api.patch(`/commitments/expenses/${expenseId}/invoice`, { invoiceId });
 }
 
 /** Re-export for convenience where both ledgers are shown together. */

@@ -108,7 +108,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="glass-card absolute right-0 z-50 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] !rounded-2xl p-0 shadow-2xl">
+        <div className="glass-card fixed inset-x-3 top-[4.25rem] z-50 !rounded-2xl p-0 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[22rem] sm:max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
             <p className="text-sm font-semibold text-white">Notifications</p>
             {unread > 0 && (
@@ -121,7 +121,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="max-h-[22rem] overflow-y-auto">
+          <div className="max-h-[min(22rem,calc(100vh-9rem))] overflow-y-auto">
             {items.length === 0 ? (
               <p className="px-4 py-8 text-center text-xs text-slate-500">You're all caught up.</p>
             ) : (

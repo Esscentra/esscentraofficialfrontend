@@ -23,6 +23,11 @@ import {
   deleteInvestment as apiDeleteInvestment,
   type Investment,
 } from '@/lib/investmentApi';
+import {
+  downloadInvoicePdf,
+  listInvoices,
+  type InvoiceRecord,
+} from '@/lib/invoiceApi';
 import type { User } from '@/types';
 
 const inr = new Intl.NumberFormat('en-IN', {
@@ -49,6 +54,7 @@ export default function InvestmentsPage() {
   const [editing, setEditing] = useState<Investment | null>(null);
   const [busy, setBusy] = useState(false);
   const [invoicePreview, setInvoicePreview] = useState<{ url: string; name?: string } | null>(null);
+  const [invoiceDocs, setInvoiceDocs] = useState<InvoiceRecord[]>([]);
 
   /* ------------------------------- Load data ------------------------------- */
   useEffect(() => {
@@ -68,6 +74,11 @@ export default function InvestmentsPage() {
           toast.error('Could not load investments', getErrorMessage(e, 'Admin access required.')),
       )
       .finally(() => on && setLoading(false));
+    // Generated invoices for the "link an invoice" picker. Best-effort: the
+    // page still works if the invoices module has nothing to offer.
+    listInvoices({ limit: 200 })
+      .then((result) => on && setInvoiceDocs(result.rows))
+      .catch(() => undefined);
     return () => {
       on = false;
     };
@@ -86,6 +97,17 @@ export default function InvestmentsPage() {
   }, [investors]);
 
   const totalRecorded = useMemo(() => items.reduce((s, i) => s + i.amount, 0), [items]);
+
+  const invoiceOptions = useMemo(
+    () => [
+      { value: '', label: 'No linked invoice' },
+      ...invoiceDocs.map((doc) => ({
+        value: doc._id,
+        label: `${doc.number} — ${doc.partyName} · ${inr.format(doc.total)}`,
+      })),
+    ],
+    [invoiceDocs],
+  );
 
   const openCreate = () => {
     setEditing(null);
@@ -107,6 +129,8 @@ export default function InvestmentsPage() {
       investedAt: String(f.get('investedAt') ?? ''),
       notes: String(f.get('notes') ?? ''),
       invoice: invoice instanceof File && invoice.size > 0 ? invoice : undefined,
+      // '' unlinks; an id attaches that generated invoice/bill.
+      invoiceId: String(f.get('invoiceId') ?? ''),
     };
 
     setBusy(true);
@@ -196,8 +220,30 @@ export default function InvestmentsPage() {
               <Download className="h-3.5 w-3.5" />
             </button>
           </span>
-        ) : (
+        ) : i.invoiceDoc ? null : (
           <StatusBadge tone="amber">no pdf</StatusBadge>
+        ),
+    },
+    {
+      key: 'invoiceDoc',
+      header: 'Linked invoice',
+      render: (i) =>
+        i.invoiceDoc ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              void downloadInvoicePdf(i.invoiceDoc!.id, `${i.invoiceDoc!.number}.pdf`).catch(
+                () => toast.error('Download failed', 'Could not fetch the invoice PDF.'),
+              );
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 font-mono text-xs font-semibold text-brand-300 transition hover:bg-brand-500/10"
+            title={`Download ${i.invoiceDoc.number}.pdf`}
+          >
+            <Download className="h-3.5 w-3.5" /> {i.invoiceDoc.number}
+          </button>
+        ) : (
+          <span className="text-xs text-slate-600">—</span>
         ),
     },
     {
@@ -285,6 +331,16 @@ export default function InvestmentsPage() {
             defaultValue={editing?.notes ?? ''}
             placeholder="Round, terms, reference number…"
           />
+          <Select
+            label="Link a generated invoice (optional)"
+            name="invoiceId"
+            defaultValue={editing?.invoiceDoc?.id ?? ''}
+            options={invoiceOptions}
+          />
+          <p className="-mt-2 text-xs text-slate-500">
+            Pick a document generated under Invoices &amp; Bills — the investor can view and
+            download it from their dashboard. Choosing “No linked invoice” removes the link.
+          </p>
           <FileField
             label={editing?.invoiceUrl ? 'Replace invoice PDF (optional)' : 'Invoice PDF (optional)'}
             name="invoice"

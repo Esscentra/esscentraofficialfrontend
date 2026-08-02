@@ -4,9 +4,12 @@ import {
   BadgeCheck,
   Building,
   Building2,
+  Coins,
   FileText,
+  FolderArchive,
   FolderKanban,
   HandCoins,
+  History,
   IndianRupee,
   ListChecks,
   Mail,
@@ -15,6 +18,7 @@ import {
   Target,
   UserCog,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -25,7 +29,7 @@ import {
   isMarketerRole,
   isSuperAdminRole,
 } from '@/lib/utils';
-import InvestorDashboard from './InvestorDashboard';
+import InvestorOverview from './investor/Overview';
 import MarketerDashboard from './MarketerDashboard';
 
 type Card = {
@@ -52,6 +56,13 @@ const CARDS: Card[] = [
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, hint: 'Verify identity submissions', adminOnly: true },
   { to: '/app/investments', label: 'Investments', icon: IndianRupee, hint: 'Record contributions & invoices', adminOnly: true },
   { to: '/app/commitments', label: 'Commitments', icon: HandCoins, hint: 'Pledges, installments & spending', adminOnly: true },
+  // Investor finance: the figures every investor dashboard reads from.
+  { to: '/app/finance/revenue', label: 'Revenue', icon: IndianRupee, hint: 'Record client payments', adminOnly: true },
+  { to: '/app/finance/expenses', label: 'Expenses', icon: Wallet, hint: 'Approve business costs', adminOnly: true },
+  { to: '/app/finance/valuation', label: 'Valuation', icon: Building2, hint: 'Set company worth & cap table', adminOnly: true },
+  { to: '/app/finance/distributions', label: 'Distributions', icon: Coins, hint: 'Approve & pay profit shares', adminOnly: true },
+  { to: '/app/finance/documents', label: 'Investor docs', icon: FolderArchive, hint: 'Agreements & certificates', adminOnly: true },
+  { to: '/app/finance/audit', label: 'Audit trail', icon: History, hint: 'Every financial change', adminOnly: true },
   { to: '/app/roles', label: 'Roles', icon: ShieldHalf, hint: 'Define team access roles', superAdminOnly: true },
 ];
 
@@ -78,8 +89,11 @@ export default function Dashboard() {
   // Narrow-surface roles get a purpose-built overview instead of the workspace
   // card grid, which would mostly link to pages they cannot open.
   // (Placed after the hooks above so hook order stays stable.)
+  // The investor's landing page is the full finance overview — position,
+  // valuation, profit share and ROI. Their original records view (commitments,
+  // invoices and fund usage) lives on at /app/investor/records.
   if (isInvestorRole(user?.role)) {
-    return <InvestorDashboard />;
+    return <InvestorOverview />;
   }
   if (isMarketerRole(user?.role)) {
     return <MarketerDashboard />;
