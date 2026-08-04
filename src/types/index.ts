@@ -1,3 +1,13 @@
+/** The company a client account belongs to. */
+export interface UserCompany {
+  id: string;
+  name: string;
+  logo?: string;
+  industry?: string | null;
+  description?: string | null;
+  website?: string | null;
+}
+
 export interface User {
   id: string;
   /** Display name, derived from firstName + lastName when they exist. */
@@ -24,6 +34,11 @@ export interface User {
     website?: string;
   };
 
+  /**
+   * Set for CLIENT accounts. When present the UI shows the company name in
+   * place of the person's own — a client is dealt with as a company.
+   */
+  company?: UserCompany | null;
   createdAt?: string;
 }
 

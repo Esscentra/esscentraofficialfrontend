@@ -141,6 +141,8 @@ export default function TasksPage() {
       contractStatus: String(f.get('contractStatus') ?? 'PENDING') as ContractStatus,
       contractStartDate: String(f.get('contractStartDate') ?? ''),
       contractEndDate: String(f.get('contractEndDate') ?? ''),
+      reportingTo: String(f.get('reportingTo') ?? ''),
+      metaAdsSpend: String(f.get('metaAdsSpend') ?? ''),
       paymentStatus: String(f.get('paymentStatus') ?? 'PENDING') as PaymentStatus,
     };
     if (!input.title) return;
@@ -473,6 +475,30 @@ export default function TasksPage() {
                       value: s,
                       label: humanize(s),
                     }))}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Reporting to"
+                    name="reportingTo"
+                    defaultValue={editing?.reportingTo ?? ''}
+                    options={[
+                      { value: '', label: 'Not set' },
+                      ...people.map((p) => ({
+                        value: p.id,
+                        label: `${p.name} — ${p.role.replace(/_/g, ' ').toLowerCase()}`,
+                      })),
+                    ]}
+                  />
+                  <Input
+                    label="Meta ads spend (INR)"
+                    name="metaAdsSpend"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={editing?.metaAdsSpend ?? 0}
+                    className="!pl-4"
                   />
                 </div>
 

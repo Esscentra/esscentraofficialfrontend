@@ -23,8 +23,10 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  LifeBuoy,
   PieChart,
   Receipt,
+  ScrollText,
   Settings,
   ShieldCheck,
   ShieldHalf,
@@ -48,6 +50,8 @@ import {
   cn,
   isAdminRole,
   isInvestorRole,
+  isClientRole,
+  isMarketerRole,
   isSuperAdminRole,
 } from '@/lib/utils';
 
@@ -68,10 +72,25 @@ const NAV = [
   { to: '/app/investor/payments', label: 'Payments', icon: Coins, investorOnly: true },
   { to: '/app/investor/reports', label: 'Reports', icon: BarChart3, investorOnly: true },
   { to: '/app/investor/documents', label: 'Documents', icon: FolderArchive, investorOnly: true },
-  { to: '/app/investor/fund-usage', label: 'Fund usage', icon: Receipt, investorOnly: true },
+  { to: '/app/investor/records', label: 'Fund usage', icon: Receipt, investorOnly: true },
   { to: '/app/investor/notifications', label: 'Notifications', icon: Bell, investorOnly: true },
   { to: '/app/investor/profile', label: 'My profile', icon: UserCircle, investorOnly: true },
   { to: '/app/investor/settings', label: 'Settings', icon: Settings, investorOnly: true },
+
+  /* ------------------------ contractor workspace ------------------------ */
+  // Shown only to the FREELANCE_PERFORMANCE_MARKETER role. Ordered the way
+  // the engagement runs: the work, the paperwork, the money, then help.
+  { to: '/app/marketer/tasks', label: 'My tasks', icon: ListChecks, marketerOnly: true },
+  { to: '/app/marketer/documents', label: 'Documents', icon: FolderArchive, marketerOnly: true },
+  { to: '/app/marketer/payments', label: 'Payments', icon: Coins, marketerOnly: true },
+  { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, marketerOnly: true },
+
+  /* --------------------------- client portal ---------------------------- */
+  // Shown only to the CLIENT role. Their work, their paperwork, their people.
+  { to: '/app/client/projects', label: 'My projects', icon: FolderKanban, clientOnly: true },
+  { to: '/app/client/documents', label: 'Documents', icon: FolderArchive, clientOnly: true },
+  { to: '/app/tickets', label: 'Support tickets', icon: LifeBuoy, clientOnly: true },
+  { to: '/app/client/settings', label: 'Settings', icon: Settings, clientOnly: true },
 
   /* --------------------------- finance admin ---------------------------- */
   { to: '/app/finance/revenue', label: 'Revenue', icon: IndianRupee, adminOnly: true },
@@ -80,6 +99,9 @@ const NAV = [
   { to: '/app/finance/distributions', label: 'Distributions', icon: Coins, adminOnly: true },
   { to: '/app/finance/documents', label: 'Investor docs', icon: FolderArchive, adminOnly: true },
   { to: '/app/finance/audit', label: 'Audit trail', icon: History, adminOnly: true },
+  { to: '/app/finance/clients', label: 'Clients', icon: Building, superAdminOnly: true },
+  { to: '/app/finance/contractor-payments', label: 'Contractor pay', icon: HandCoins, adminOnly: true },
+  { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, adminOnly: true },
 
   { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
   { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
@@ -105,6 +127,8 @@ const NAV = [
   superAdminOnly?: boolean;
   staffOnly?: boolean;
   investorOnly?: boolean;
+  marketerOnly?: boolean;
+  clientOnly?: boolean;
 }>;
 
 const SIDEBAR_KEY = 'esscentra.sidebar.collapsed';
@@ -126,12 +150,19 @@ export function DashboardLayout() {
   // Investors (read-only stakeholders) only get the KPI overview.
   const isAdmin = isAdminRole(user?.role);
   const isSuperAdmin = isSuperAdminRole(user?.role);
+  const isMarketer = isMarketerRole(user?.role);
+  const isClient = isClientRole(user?.role);
+
+  /** Clients are known by their company; everyone else by their own name. */
+  const displayName = user?.company?.name || user?.name || '';
   const isInvestor = isInvestorRole(user?.role);
   const navItems = NAV.filter((item) => {
     // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) get only the pages
     // listed for them. Checked first so a tier flag can never widen it.
     if (!canAccessAppPath(user?.role, item.to)) return false;
     if (item.superAdminOnly) return isSuperAdmin;
+    if (item.marketerOnly) return isMarketer;
+    if (item.clientOnly) return isClient;
     if (item.adminOnly) return isAdmin;
     // The investor workspace is theirs alone — an admin inspecting an
     // investor does it from the finance screens, not by borrowing their nav.
@@ -258,14 +289,42 @@ export function DashboardLayout() {
             {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            {/* Invoices & bills live in the header rather than the sidebar:
+                they cut across investors, clients and freelancers, so they
+                belong to no single section of the nav. */}
+            {isAdmin && (
+              <NavLink
+                to="/app/finance/invoices"
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold transition sm:px-3',
+                    isActive
+                      ? 'bg-brand-500/15 text-brand-200 ring-1 ring-brand-400/30'
+                      : 'text-slate-300 hover:bg-white/10 hover:text-white',
+                  )
+                }
+                title="Invoices & Bills"
+              >
+                <ScrollText className="h-[18px] w-[18px] shrink-0" />
+                <span className="hidden md:inline">Invoices &amp; Bills</span>
+              </NavLink>
+            )}
             <NotificationBell />
             <ThemeSwitcher />
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-white">{user?.name}</p>
-              <p className="text-xs text-slate-400">{user?.email}</p>
+              {/* A client is dealt with as a company: show the company name,
+                  with the person's own name underneath so they still know
+                  which login they are on. */}
+              <p className="text-sm font-semibold text-white">{displayName}</p>
+              <p className="text-xs text-slate-400">
+                {user?.company ? user.name : user?.email}
+              </p>
             </div>
-            <Avatar src={user?.avatarUrl} name={user?.name} />
+            <Avatar
+              src={user?.company?.logo ?? user?.avatarUrl}
+              name={displayName}
+            />
             <button
               onClick={onLogout}
               className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"

@@ -8,6 +8,8 @@ import {
   FileText,
   FolderKanban,
   ListChecks,
+  MessageSquare,
+  Pencil,
   Plus,
   Receipt,
   Trash2,
@@ -34,6 +36,13 @@ import {
   submitWeeklyReport,
   uploadTaskDocument,
 } from '@/lib/taskApi';
+import {
+  addTaskRemark,
+  deleteTaskRemark,
+  listTaskRemarks,
+  updateTaskRemark,
+  type TaskRemark,
+} from '@/lib/marketerApi';
 import { getErrorMessage, isAdminRole, isMarketerRole } from '@/lib/utils';
 import type {
   ContractStatus,
@@ -157,6 +166,10 @@ export default function TaskDetailPage() {
 
   const [task, setTask] = useState<Task | null>(null);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
+  const [remarks, setRemarks] = useState<TaskRemark[]>([]);
+  const [remarkDraft, setRemarkDraft] = useState('');
+  const [editingRemark, setEditingRemark] = useState<string | null>(null);
+  const [editRemarkDraft, setEditRemarkDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -173,9 +186,13 @@ export default function TaskDetailPage() {
         setTask(t);
         // Reports sit behind their own permission check; a failure here
         // shouldn't blank the page, so it degrades to an empty list.
-        return listWeeklyReports(id)
-          .then(setReports)
-          .catch(() => setReports([]));
+        // Reports and remarks each sit behind their own permission check;
+        // a failure in either degrades to an empty list rather than blanking
+        // the page.
+        return Promise.all([
+          listWeeklyReports(id).then(setReports).catch(() => setReports([])),
+          listTaskRemarks(id).then(setRemarks).catch(() => setRemarks([])),
+        ]);
       })
       .catch((e) => setError(getErrorMessage(e, 'This task could not be loaded.')))
       .finally(() => setLoading(false));
@@ -188,6 +205,44 @@ export default function TaskDetailPage() {
     [task?.contractEndDate],
   );
   const dueIn = useMemo(() => daysUntil(task?.dueDate), [task?.dueDate]);
+
+  /* -------------------------------- remarks -------------------------------- */
+  /*
+   * The contractor's running account of progress. Admins read it here — it is
+   * the answer to "what has actually happened on this engagement?" between
+   * formal weekly reports. Editing stays with whoever wrote the words.
+   */
+
+  const addRemark = async () => {
+    if (!remarkDraft.trim()) return;
+    try {
+      const remark = await addTaskRemark(id, remarkDraft.trim());
+      setRemarks((rows) => [remark, ...rows]);
+      setRemarkDraft('');
+    } catch (e) {
+      toast.error('Could not save', getErrorMessage(e));
+    }
+  };
+
+  const saveRemark = async (remarkId: string) => {
+    if (!editRemarkDraft.trim()) return;
+    try {
+      const updated = await updateTaskRemark(remarkId, editRemarkDraft.trim());
+      setRemarks((rows) => rows.map((r) => (r._id === remarkId ? updated : r)));
+      setEditingRemark(null);
+    } catch (e) {
+      toast.error('Could not update', getErrorMessage(e));
+    }
+  };
+
+  const removeRemark = async (remarkId: string) => {
+    try {
+      await deleteTaskRemark(remarkId);
+      setRemarks((rows) => rows.filter((r) => r._id !== remarkId));
+    } catch (e) {
+      toast.error('Could not delete', getErrorMessage(e));
+    }
+  };
 
   /* ------------------------------- documents ------------------------------- */
 
@@ -435,6 +490,119 @@ export default function TaskDetailPage() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </RowButton>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Section>
+
+      {/* ------------------------------- remarks ------------------------------- */}
+      <Section
+        title="Progress remarks"
+        hint={
+          canManage
+            ? `${remarks.length} written by the assignee`
+            : 'Your running notes on this task'
+        }
+      >
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={remarkDraft}
+            onChange={(e) => setRemarkDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void addRemark();
+              }
+            }}
+            placeholder={canManage ? 'Add a note to the trail…' : 'What moved on this task?'}
+            className="h-10 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-brand-400/50 focus:ring-2 focus:ring-brand-500/25"
+          />
+          <Button size="sm" onClick={() => void addRemark()} disabled={!remarkDraft.trim()}>
+            <MessageSquare className="h-4 w-4" /> Add remark
+          </Button>
+        </div>
+
+        {remarks.length === 0 ? (
+          <p className="py-6 text-center text-sm text-slate-500">
+            {canManage
+              ? 'The assignee has not written any progress notes yet.'
+              : 'No remarks yet — your notes here are how the team follows progress.'}
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {remarks.map((r) => {
+              const author =
+                typeof r.authorId === 'object'
+                  ? [r.authorId?.firstName, r.authorId?.lastName]
+                      .filter(Boolean)
+                      .join(' ') || r.authorId?.email
+                  : undefined;
+              const mine =
+                String(typeof r.authorId === 'object' ? r.authorId?._id : r.authorId) ===
+                String((user as any)?.id ?? (user as any)?._id);
+
+              return (
+                <li
+                  key={r._id}
+                  className="rounded-xl border border-white/10 bg-white/[0.02] p-4"
+                >
+                  {editingRemark === r._id ? (
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        value={editRemarkDraft}
+                        onChange={(e) => setEditRemarkDraft(e.target.value)}
+                        className="h-9 flex-1 rounded-lg border border-white/10 bg-white/[0.05] px-3 text-sm text-slate-100 outline-none focus:border-brand-400/50"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => void saveRemark(r._id)}>
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingRemark(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm leading-relaxed text-slate-200">{r.body}</p>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-slate-500">
+                          {author ?? 'Unknown'} · {day(r.createdAt)}
+                        </p>
+                        <div className="flex gap-1">
+                          {mine && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingRemark(r._id);
+                                setEditRemarkDraft(r.body);
+                              }}
+                              className="grid h-7 w-7 place-items-center rounded-md text-slate-400 transition hover:bg-white/10 hover:text-white"
+                              aria-label="Edit remark"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {(mine || canManage) && (
+                            <button
+                              type="button"
+                              onClick={() => void removeRemark(r._id)}
+                              className="grid h-7 w-7 place-items-center rounded-md text-slate-400 transition hover:bg-rose-500/15 hover:text-rose-300"
+                              aria-label="Delete remark"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </li>
               );

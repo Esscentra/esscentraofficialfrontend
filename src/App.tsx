@@ -49,7 +49,6 @@ import InvestorReportsPage from './pages/app/investor/Reports';
 import InvestorRoiPage from './pages/app/investor/Roi';
 import InvestorEquityPage from './pages/app/investor/EquityProgress';
 import InvestorShareValuePage from './pages/app/investor/ShareValue';
-import InvestorFundUsagePage from './pages/app/investor/FundUsage';
 import InvestorPaymentsPage from './pages/app/investor/PaymentHistory';
 import InvestorDocumentsPage from './pages/app/investor/Documents';
 import InvestorNotificationsPage from './pages/app/investor/Notifications';
@@ -64,6 +63,18 @@ import ValuationAdminPage from './pages/app/finance/ValuationAdmin';
 import DistributionsPage from './pages/app/finance/Distributions';
 import DocumentsAdminPage from './pages/app/finance/DocumentsAdmin';
 import AuditLogPage from './pages/app/finance/AuditLog';
+import InvoicesPage from './pages/app/finance/Invoices';
+import MarketerPaymentsAdminPage from './pages/app/finance/MarketerPayments';
+import MarketerOverviewPage from './pages/app/marketer/Overview';
+import MarketerTasksPage from './pages/app/marketer/Tasks';
+import MarketerDocumentsPage from './pages/app/marketer/Documents';
+import MarketerPaymentsPage from './pages/app/marketer/Payments';
+import MarketerTicketsPage from './pages/app/marketer/Tickets';
+import ClientOverviewPage from './pages/app/client/Overview';
+import ClientProjectsPage from './pages/app/client/Projects';
+import ClientDocumentsPage from './pages/app/client/Documents';
+import ClientSettingsPage from './pages/app/client/Settings';
+import ClientsAdminPage from './pages/app/finance/Clients';
 
 export default function App() {
   return (
@@ -157,6 +168,14 @@ export default function App() {
         <Route path="finance/distributions" element={<AdminRoute><DistributionsPage /></AdminRoute>} />
         <Route path="finance/documents" element={<AdminRoute><DocumentsAdminPage /></AdminRoute>} />
         <Route path="finance/audit" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
+        {/* Invoices and payment bills. Admins read; only a super admin can
+            generate, edit or delete — enforced server-side, not here. */}
+        <Route path="finance/invoices" element={<AdminRoute><InvoicesPage /></AdminRoute>} />
+        {/* Contractor payment ledger: admins read, super admins write. */}
+        <Route
+          path="finance/contractor-payments"
+          element={<AdminRoute><MarketerPaymentsAdminPage /></AdminRoute>}
+        />
 
         {/* Investor workspace. Not behind AdminRoute or StaffRoute — this IS
             the investor's area. WorkspaceRoute's allowlist keeps other
@@ -166,7 +185,6 @@ export default function App() {
         {/* The original records view, preserved: commitments, invoices and
             how the investor's own funds were spent. */}
         <Route path="investor/records" element={<InvestorRecordsPage />} />
-        <Route path="investor/fund-usage" element={<InvestorFundUsagePage />} />
         <Route path="investor/timeline" element={<InvestorTimelinePage />} />
         <Route path="investor/valuation" element={<InvestorValuationPage />} />
         <Route path="investor/revenue" element={<InvestorRevenuePage />} />
@@ -181,6 +199,32 @@ export default function App() {
         <Route path="investor/notifications" element={<InvestorNotificationsPage />} />
         <Route path="investor/profile" element={<InvestorProfilePage />} />
         <Route path="investor/settings" element={<InvestorSettingsPage />} />
+
+        {/* Contractor workspace. Not admin gated — this IS the freelance
+            performance marketer's area. WorkspaceRoute's allowlist keeps
+            other roles out, and every endpoint behind these pages is
+            scoped to the calling contractor server-side. */}
+        <Route path="marketer" element={<MarketerOverviewPage />} />
+        <Route path="marketer/tasks" element={<MarketerTasksPage />} />
+        <Route path="marketer/documents" element={<MarketerDocumentsPage />} />
+        <Route path="marketer/payments" element={<MarketerPaymentsPage />} />
+        <Route path="marketer/tickets" element={<MarketerTicketsPage />} />
+        {/* Shared support desk: contractors, clients and admins all land on
+            the same conversation view rather than three that drift. */}
+        <Route path="tickets" element={<MarketerTicketsPage />} />
+
+        {/* Client portal. Read-only and scoped to the caller's company
+            server-side; WorkspaceRoute's allowlist keeps other roles out. */}
+        <Route path="client" element={<ClientOverviewPage />} />
+        <Route path="client/projects" element={<ClientProjectsPage />} />
+        <Route path="client/documents" element={<ClientDocumentsPage />} />
+        <Route path="client/settings" element={<ClientSettingsPage />} />
+
+        {/* Client administration — super admin only, enforced server-side. */}
+        <Route
+          path="finance/clients"
+          element={<SuperAdminRoute><ClientsAdminPage /></SuperAdminRoute>}
+        />
         {/* Super-admin only: managing role types */}
         <Route path="roles" element={<SuperAdminRoute><RolesPage /></SuperAdminRoute>} />
 

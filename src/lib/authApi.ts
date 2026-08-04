@@ -50,6 +50,15 @@ export interface RawAccount {
     linkedin?: string | null;
     website?: string | null;
   } | null;
+  /** Present for CLIENT accounts — the company they belong to. */
+  company?: {
+    id: string;
+    name: string;
+    logo?: string | null;
+    industry?: string | null;
+    description?: string | null;
+    website?: string | null;
+  } | null;
   createdAt?: string;
 }
 
@@ -77,6 +86,16 @@ export function mapAccount(raw: RawAccount): User {
           website: raw.socials.website ?? undefined,
         }
       : undefined,
+    company: raw.company
+      ? {
+          id: String(raw.company.id),
+          name: raw.company.name,
+          logo: raw.company.logo ?? undefined,
+          industry: raw.company.industry ?? null,
+          description: raw.company.description ?? null,
+          website: raw.company.website ?? null,
+        }
+      : null,
     createdAt: raw.createdAt,
   };
 }

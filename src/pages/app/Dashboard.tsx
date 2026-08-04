@@ -26,11 +26,13 @@ import {
   canAccessAppPath,
   isAdminRole,
   isInvestorRole,
+  isClientRole,
   isMarketerRole,
   isSuperAdminRole,
 } from '@/lib/utils';
 import InvestorOverview from './investor/Overview';
-import MarketerDashboard from './MarketerDashboard';
+import MarketerOverview from './marketer/Overview';
+import ClientOverview from './client/Overview';
 
 type Card = {
   to: string;
@@ -95,8 +97,11 @@ export default function Dashboard() {
   if (isInvestorRole(user?.role)) {
     return <InvestorOverview />;
   }
+  if (isClientRole(user?.role)) {
+    return <ClientOverview />;
+  }
   if (isMarketerRole(user?.role)) {
-    return <MarketerDashboard />;
+    return <MarketerOverview />;
   }
 
   return (

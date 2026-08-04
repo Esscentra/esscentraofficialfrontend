@@ -56,7 +56,18 @@ export const RESTRICTED_ROLE_PATHS: Record<string, string[]> = {
    * whole engagement (contract, agreements, deadlines, weekly reports) hangs
    * off their tasks instead.
    */
-  FREELANCE_PERFORMANCE_MARKETER: ['/app', '/app/tasks'],
+  FREELANCE_PERFORMANCE_MARKETER: ['/app', '/app/marketer', '/app/tickets'],
+
+  /**
+   * Client: their own portal, the shared support desk, and nothing else.
+   *
+   * `/app/client` covers every child route, so new portal pages are reachable
+   * without editing this list — while the internal project board, the finance
+   * screens and the CRM stay out of reach even if the URL is typed by hand.
+   * The matching server-side gate is `resolveAccountId`, which is what stops
+   * one client reading another's company.
+   */
+  CLIENT: ['/app', '/app/client', '/app/tickets'],
 
   /**
    * Read-only stakeholder: their investor dashboard and nothing else.
@@ -72,6 +83,14 @@ export const RESTRICTED_ROLE_PATHS: Record<string, string[]> = {
 
 /** The outside contract-marketer role, by its canonical name. */
 export const MARKETER_ROLE = 'FREELANCE_PERFORMANCE_MARKETER';
+
+/** The client role, by its canonical name. */
+export const CLIENT_ROLE = 'CLIENT';
+
+/** True when this account is a client of the company. */
+export function isClientRole(role?: string): boolean {
+  return normalizeRoleName(role) === CLIENT_ROLE;
+}
 
 /**
  * True for the contract marketer. They get their own Overview screen and a

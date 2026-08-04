@@ -136,6 +136,12 @@ export interface Task {
   contractEndDate?: string;
   paymentStatus: PaymentStatus;
 
+  /** Who the assignee reports to on this work. */
+  reportingTo?: string;
+  reportingToName?: string;
+  /** Ad spend booked against this task, in INR. Super admin states it. */
+  metaAdsSpend?: number;
+
   /** Empty for anyone who isn't an admin or the assignee. */
   documents: TaskDocument[];
 }

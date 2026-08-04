@@ -51,6 +51,8 @@ interface RawTask {
   contractStartDate?: string;
   contractEndDate?: string;
   paymentStatus?: Task['paymentStatus'];
+  reportingTo?: RawNamed | string;
+  metaAdsSpend?: number;
   documents?: Array<Record<string, any>>;
 }
 
@@ -98,6 +100,9 @@ function mapTask(t: RawTask): Task {
     contractStartDate: t.contractStartDate,
     contractEndDate: t.contractEndDate,
     paymentStatus: t.paymentStatus ?? 'PENDING',
+    reportingTo: refId(t.reportingTo),
+    reportingToName: personName(t.reportingTo),
+    metaAdsSpend: Number(t.metaAdsSpend) || 0,
     documents: (t.documents ?? []).map(mapDocument),
   };
 }
@@ -182,6 +187,8 @@ export interface TaskInput {
   contractStartDate?: string;
   contractEndDate?: string;
   paymentStatus?: Task['paymentStatus'];
+  reportingTo?: string;
+  metaAdsSpend?: number | string;
 }
 
 /**
