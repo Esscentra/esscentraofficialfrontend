@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
   BarChart3,
@@ -9,7 +9,6 @@ import {
   Calculator,
   CalendarClock,
   Coins,
-  FileText,
   FolderArchive,
   FolderKanban,
   HandCoins,
@@ -37,9 +36,11 @@ import {
   Users,
   Wallet,
   X,
+  Orbit,
 } from 'lucide-react';
 import { AuroraBackground } from './AuroraBackground';
 import { NotificationBell } from './NotificationBell';
+import { QuickActions } from './QuickActions';
 import { Logo } from './Logo';
 import { ThemeSwitcher } from './ui/ThemeSwitcher';
 import { useAuth } from '@/context/AuthContext';
@@ -56,68 +57,66 @@ import {
 } from '@/lib/utils';
 
 const NAV = [
+  // Overview stays first; every group below it is sorted A→Z by label so a
+  // link is always where the eye expects it.
   { to: '/app', label: 'Overview', icon: LayoutDashboard, end: true },
 
   /* ------------------------- investor workspace ------------------------- */
-  // Shown only to the INVESTOR role. Ordered to follow the money: what they
-  // put in, what the company did with it, what it is worth, what they are owed.
-  { to: '/app/investor/timeline', label: 'My investments', icon: CalendarClock, investorOnly: true },
-  { to: '/app/investor/equity', label: 'Equity progress', icon: PieChart, investorOnly: true },
-  { to: '/app/investor/revenue', label: 'Revenue', icon: IndianRupee, investorOnly: true },
-  { to: '/app/investor/expenses', label: 'Expenses', icon: Wallet, investorOnly: true },
-  { to: '/app/investor/profit', label: 'Profit', icon: TrendingUp, investorOnly: true },
-  { to: '/app/investor/valuation', label: 'Valuation', icon: Building2, investorOnly: true },
-  { to: '/app/investor/share-value', label: 'Share value', icon: Trophy, investorOnly: true },
-  { to: '/app/investor/roi', label: 'ROI', icon: Calculator, investorOnly: true },
-  { to: '/app/investor/payments', label: 'Payments', icon: Coins, investorOnly: true },
-  { to: '/app/investor/reports', label: 'Reports', icon: BarChart3, investorOnly: true },
+  // Shown only to the INVESTOR role. Alphabetical by label.
   { to: '/app/investor/documents', label: 'Documents', icon: FolderArchive, investorOnly: true },
+  { to: '/app/investor/equity', label: 'Equity progress', icon: PieChart, investorOnly: true },
+  { to: '/app/investor/expenses', label: 'Expenses', icon: Wallet, investorOnly: true },
   { to: '/app/investor/records', label: 'Fund usage', icon: Receipt, investorOnly: true },
+  { to: '/app/investor/timeline', label: 'My investments', icon: CalendarClock, investorOnly: true },
   { to: '/app/investor/notifications', label: 'Notifications', icon: Bell, investorOnly: true },
-  { to: '/app/investor/profile', label: 'My profile', icon: UserCircle, investorOnly: true },
+  { to: '/app/investor/payments', label: 'Payments', icon: Coins, investorOnly: true },
+  { to: '/app/investor/profit', label: 'Profit', icon: TrendingUp, investorOnly: true },
+  { to: '/app/investor/reports', label: 'Reports', icon: BarChart3, investorOnly: true },
+  { to: '/app/investor/revenue', label: 'Revenue', icon: IndianRupee, investorOnly: true },
+  { to: '/app/investor/roi', label: 'ROI', icon: Calculator, investorOnly: true },
   { to: '/app/investor/settings', label: 'Settings', icon: Settings, investorOnly: true },
+  { to: '/app/investor/share-value', label: 'Share value', icon: Trophy, investorOnly: true },
+  { to: '/app/investor/valuation', label: 'Valuation', icon: Building2, investorOnly: true },
 
   /* ------------------------ contractor workspace ------------------------ */
-  // Shown only to the FREELANCE_PERFORMANCE_MARKETER role. Ordered the way
-  // the engagement runs: the work, the paperwork, the money, then help.
-  { to: '/app/marketer/tasks', label: 'My tasks', icon: ListChecks, marketerOnly: true },
+  // Shown only to the FREELANCE_PERFORMANCE_MARKETER role. Alphabetical.
   { to: '/app/marketer/documents', label: 'Documents', icon: FolderArchive, marketerOnly: true },
+  { to: '/app/marketer/tasks', label: 'My tasks', icon: ListChecks, marketerOnly: true },
   { to: '/app/marketer/payments', label: 'Payments', icon: Coins, marketerOnly: true },
   { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, marketerOnly: true },
 
   /* --------------------------- client portal ---------------------------- */
-  // Shown only to the CLIENT role. Their work, their paperwork, their people.
-  { to: '/app/client/projects', label: 'My projects', icon: FolderKanban, clientOnly: true },
+  // Shown only to the CLIENT role. Alphabetical.
   { to: '/app/client/documents', label: 'Documents', icon: FolderArchive, clientOnly: true },
-  { to: '/app/tickets', label: 'Support tickets', icon: LifeBuoy, clientOnly: true },
+  { to: '/app/client/projects', label: 'My projects', icon: FolderKanban, clientOnly: true },
   { to: '/app/client/settings', label: 'Settings', icon: Settings, clientOnly: true },
+  { to: '/app/tickets', label: 'Support tickets', icon: LifeBuoy, clientOnly: true },
 
-  /* --------------------------- finance admin ---------------------------- */
-  { to: '/app/finance/revenue', label: 'Revenue', icon: IndianRupee, adminOnly: true },
-  { to: '/app/finance/expenses', label: 'Expenses', icon: Wallet, adminOnly: true },
-  { to: '/app/finance/valuation', label: 'Valuation', icon: Building2, adminOnly: true },
-  { to: '/app/finance/distributions', label: 'Distributions', icon: Coins, adminOnly: true },
-  { to: '/app/finance/documents', label: 'Investor docs', icon: FolderArchive, adminOnly: true },
+  /* ---------------------- admin, finance and staff ---------------------- */
+  // One alphabetical block: whatever subset a role can see stays A→Z.
+  { to: '/app/accounts', label: 'Accounts', icon: Building, staffOnly: true },
   { to: '/app/finance/audit', label: 'Audit trail', icon: History, adminOnly: true },
   { to: '/app/finance/clients', label: 'Clients', icon: Building, superAdminOnly: true },
-  { to: '/app/finance/contractor-payments', label: 'Contractor pay', icon: HandCoins, adminOnly: true },
-  { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, adminOnly: true },
-
-  { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
-  { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
-  { to: '/app/investments', label: 'Investments', icon: Receipt, adminOnly: true },
   { to: '/app/commitments', label: 'Commitments', icon: HandCoins, adminOnly: true },
-  { to: '/app/leads', label: 'Leads', icon: Users, staffOnly: true },
-  { to: '/app/accounts', label: 'Accounts', icon: Building, staffOnly: true },
-  { to: '/app/projects', label: 'Projects', icon: FolderKanban, staffOnly: true },
-  { to: '/app/tasks', label: 'Tasks', icon: ListChecks, staffOnly: true },
   { to: '/app/contacts', label: 'Contacts', icon: Building2, staffOnly: true },
+  { to: '/app/finance/contractor-payments', label: 'Contractor pay', icon: HandCoins, adminOnly: true },
+  { to: '/app/finance/distributions', label: 'Distributions', icon: Coins, adminOnly: true },
+  { to: '/app/finance/expenses', label: 'Expenses', icon: Wallet, adminOnly: true },
+  // Blogs, GitHub and My documents moved to the floating quick-actions menu
+  // at the bottom-right of the workspace (see QuickActions.tsx).
   { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare, staffOnly: true },
-  // Admin-only: authoring publishes straight to the public marketing site.
-  { to: '/app/blog', label: 'Blog', icon: FileText, adminOnly: true },
+  { to: '/app/investments', label: 'Investments', icon: Receipt, adminOnly: true },
+  { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
+  { to: '/app/leads', label: 'Leads', icon: Users, staffOnly: true },
   // Admin-only: subscriber addresses are PII and the send history names them.
   { to: '/app/newsletter', label: 'Newsletter', icon: Mail, adminOnly: true },
+  { to: '/app/projects', label: 'Projects', icon: FolderKanban, staffOnly: true },
+  { to: '/app/finance/revenue', label: 'Revenue', icon: IndianRupee, adminOnly: true },
   { to: '/app/roles', label: 'Roles', icon: ShieldHalf, superAdminOnly: true },
+  { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, adminOnly: true },
+  { to: '/app/tasks', label: 'Tasks', icon: ListChecks, staffOnly: true },
+  { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
+  { to: '/app/finance/valuation', label: 'Valuation', icon: Building2, adminOnly: true },
 ] as Array<{
   to: string;
   label: string;
@@ -137,6 +136,7 @@ export function DashboardLayout() {
   const { user, logout } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false); // mobile drawer
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(SIDEBAR_KEY) === '1',
@@ -156,7 +156,16 @@ export function DashboardLayout() {
   /** Clients are known by their company; everyone else by their own name. */
   const displayName = user?.company?.name || user?.name || '';
   const isInvestor = isInvestorRole(user?.role);
-  const navItems = NAV.filter((item) => {
+  // ------------------------------------------------------------------
+  // Ecosystem hub mode — the Instagram-style account switch. Inside
+  // /app/ecosystem the parent platform's nav disappears entirely; the
+  // header swaps its "Ecosystem" button for an "Esscentra" one to switch
+  // back. Direct URL access by other roles is still stopped by
+  // EcosystemRoute — this is presentation, not enforcement.
+  // ------------------------------------------------------------------
+  const hubMode = pathname.startsWith('/app/ecosystem');
+
+  const filteredNav = NAV.filter((item) => {
     // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) get only the pages
     // listed for them. Checked first so a tier flag can never widen it.
     if (!canAccessAppPath(user?.role, item.to)) return false;
@@ -170,6 +179,10 @@ export function DashboardLayout() {
     if (item.staffOnly) return !isInvestor;
     return true;
   });
+
+  const navItems = hubMode
+    ? [{ to: '/app/ecosystem', label: 'Ecosystem hub', icon: Orbit, end: true }]
+    : filteredNav;
 
   const onLogout = async () => {
     await logout();
@@ -293,7 +306,32 @@ export function DashboardLayout() {
             {/* Invoices & bills live in the header rather than the sidebar:
                 they cut across investors, clients and freelancers, so they
                 belong to no single section of the nav. */}
-            {isAdmin && (
+            {/* The platform switcher. Esscentra ⇄ Ecosystem hub, the same
+                way Instagram flips between a personal account and the
+                professional dashboard. Founders and the investor only. */}
+            {(isSuperAdmin || isInvestor) && (
+              <button
+                type="button"
+                onClick={() => navigate(hubMode ? '/app' : '/app/ecosystem')}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold transition sm:px-3',
+                  hubMode
+                    ? 'bg-gradient-to-r from-brand-500/80 to-brand-700/70 !text-white shadow'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white',
+                )}
+                title={hubMode ? 'Back to Esscentra' : 'Switch to the Ecosystem hub'}
+              >
+                {hubMode ? (
+                  <Building2 className="h-[18px] w-[18px] shrink-0" />
+                ) : (
+                  <Orbit className="h-[18px] w-[18px] shrink-0" />
+                )}
+                <span className="hidden md:inline">
+                  {hubMode ? 'Esscentra' : 'Ecosystem'}
+                </span>
+              </button>
+            )}
+            {isAdmin && !hubMode && (
               <NavLink
                 to="/app/finance/invoices"
                 className={({ isActive }) =>
@@ -340,6 +378,10 @@ export function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating quick-actions menu (Blogs / GitHub / My documents) —
+          super admin only, hidden inside the Ecosystem hub. */}
+      {isSuperAdmin && !hubMode && <QuickActions />}
     </div>
   );
 }

@@ -15,7 +15,13 @@ import { ChartFrame } from '@/components/charts/ChartFrame';
 import { DonutChart } from '@/components/charts/DonutChart';
 import { BarChart } from '@/components/charts/BarChart';
 import { SERIES, categoricalColor } from '@/components/charts/chartTheme';
-import { getExpenseView, type ExpenseRow, type ExpenseView } from '@/lib/investorFinanceApi';
+import {
+  getExpenseView,
+  type ExpenseRow,
+  type ExpenseView,
+  type FundSpendRow,
+} from '@/lib/investorFinanceApi';
+import { downloadExpenseAttachment } from '@/lib/commitmentApi';
 import { useInvestorData } from './useInvestorData';
 import { formatDate, humanize, inr } from '@/lib/format';
 
@@ -65,7 +71,7 @@ export default function InvestorExpenses() {
               label="Total expenses"
               value={data.totals.totalExpenses}
               format={inr}
-              hint={`${data.totals.recognisedCount} approved item${
+              hint={`${data.totals.recognisedCount} recognised item${
                 data.totals.recognisedCount === 1 ? '' : 's'
               }`}
               tone="rose"
@@ -98,11 +104,31 @@ export default function InvestorExpenses() {
             />
           </div>
 
+          {/*
+            Costs reach the P&L from three modules. Naming them keeps the
+            headline reconcilable — an investor can see why the total is larger
+            than the expense ledger alone.
+          */}
+          {(data.totals.vendorBillAmount > 0 ||
+            data.totals.contractorPaymentAmount > 0) && (
+            <div className="glass-card flex flex-wrap gap-x-10 gap-y-4 p-5">
+              <SourceFigure
+                label="Recorded expenses"
+                value={data.totals.businessExpenseAmount}
+              />
+              <SourceFigure label="Vendor bills" value={data.totals.vendorBillAmount} />
+              <SourceFigure
+                label="Contractor payments"
+                value={data.totals.contractorPaymentAmount}
+              />
+            </div>
+          )}
+
           {data.totals.pendingAmount > 0 && (
             <InfoNote tone="info">
-              {inr(data.totals.pendingAmount)} of expenses is still awaiting approval and
-              has <strong>not</strong> been deducted from profit. Net profit will fall by
-              that amount if all of it is approved.
+              {inr(data.totals.pendingAmount)} of costs is still awaiting approval or
+              release and has <strong>not</strong> been deducted from profit. Net profit
+              will fall by that amount once all of it is approved and paid.
             </InfoNote>
           )}
 
@@ -228,8 +254,111 @@ export default function InvestorExpenses() {
               }
             />
           </Section>
+
+          {data.fundSpend && data.fundSpend.rows.length > 0 && (
+            <Section
+              title="Spent from your investment funds"
+              description="How money from your commitments was used, recorded by the admin team with proof files. Shown for transparency — this is capital deployment, not an operating cost, so it is not deducted from net profit."
+            >
+              <FinanceTable<FundSpendRow>
+                rows={data.fundSpend.rows}
+                rowKey={(row) => row.id}
+                emptyTitle="No fund spend recorded"
+                emptyMessage="Money spent from your commitments will appear here."
+                maxHeight={480}
+                columns={[
+                  {
+                    key: 'date',
+                    header: 'Date',
+                    render: (row) => (
+                      <span className="whitespace-nowrap text-slate-300">
+                        {formatDate(row.spentAt)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'category',
+                    header: 'Category',
+                    render: (row) => <Pill tone="blue">{humanize(row.category)}</Pill>,
+                  },
+                  {
+                    key: 'description',
+                    header: 'Description',
+                    render: (row) => (
+                      <div className="min-w-0">
+                        <p className="truncate text-slate-200">{row.description || '—'}</p>
+                        {row.commitmentTitle && (
+                          <p className="truncate text-xs text-slate-500">
+                            {row.commitmentTitle}
+                          </p>
+                        )}
+                        {row.attachments.length > 0 && (
+                          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                            {row.attachments.map((file, index) =>
+                              file.unavailable ? (
+                                <span
+                                  key={index}
+                                  className="text-[11px] text-slate-600 line-through"
+                                  title="File no longer stored"
+                                >
+                                  {file.originalName ?? `proof-${index + 1}`}
+                                </span>
+                              ) : (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() =>
+                                    void downloadExpenseAttachment(
+                                      row.id,
+                                      index,
+                                      file.originalName ?? `proof-${index + 1}`,
+                                    )
+                                  }
+                                  className="text-[11px] text-brand-300 underline-offset-2 hover:underline"
+                                >
+                                  {file.originalName ?? `proof-${index + 1}`}
+                                </button>
+                              ),
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    numeric: true,
+                    render: (row) => (
+                      <span className="font-semibold text-white">{inr(row.amount)}</span>
+                    ),
+                  },
+                ]}
+                footer={
+                  <>
+                    <TotalCell numeric={false} colSpan={3}>
+                      Total spent from your funds
+                    </TotalCell>
+                    <TotalCell>{inr(data.fundSpend.totals.total)}</TotalCell>
+                  </>
+                }
+              />
+            </Section>
+          )}
         </>
       )}
+    </div>
+  );
+}
+
+/** One source's contribution to the recognised total. */
+function SourceFigure({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+      <p className="mt-0.5 text-lg font-bold tabular-nums text-white">{inr(value)}</p>
     </div>
   );
 }

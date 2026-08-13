@@ -78,7 +78,9 @@ export const RESTRICTED_ROLE_PATHS: Record<string, string[]> = {
    * is typed by hand. The matching server-side gate is `resolveInvestorId`,
    * which is what actually stops one investor reading another's position.
    */
-  INVESTOR: ['/app', '/app/investor'],
+  // `/app/ecosystem` is the holding-company view — deliberately shared with
+  // the investor read-only (server enforces it; the UI hides the buttons).
+  INVESTOR: ['/app', '/app/investor', '/app/ecosystem'],
 };
 
 /** The outside contract-marketer role, by its canonical name. */

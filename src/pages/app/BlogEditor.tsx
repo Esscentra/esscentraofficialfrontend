@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { marked } from 'marked';
 import {
   ArrowLeft,
   Clock,
@@ -9,8 +11,6 @@ import {
   Hash,
   Image as ImageIcon,
   Link2,
-  PanelsTopBottom,
-  PenLine,
   Save,
   Search,
   Send,
@@ -24,7 +24,8 @@ import { Select, Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, humanize, type Tone } from '@/components/ui/StatusBadge';
 import { LoadingCard } from '@/components/ui/LoadingCard';
-import { Markdown } from '@/components/ui/Markdown';
+import { PostContent } from '@/components/ui/PostContent';
+import { RichTextEditor } from '@/components/editor/RichTextEditor';
 import { useToast } from '@/components/ui/Toast';
 import { API_BASE_URL } from '@/lib/api';
 import {
@@ -34,9 +35,10 @@ import {
   listCategories,
   listSeries,
   updatePost,
+  uploadEditorImage,
   type PostInput,
 } from '@/lib/blogApi';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/utils';
 import type { BlogCategory, BlogSeries, BlogStatus } from '@/types';
 
 const STATUSES: BlogStatus[] = ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
@@ -47,20 +49,7 @@ const STATUS_TONE: Record<BlogStatus, Tone> = {
   ARCHIVED: 'red',
 };
 
-type Mode = 'write' | 'preview' | 'split';
-
-const STARTER = `## Getting started
-
-Write in **Markdown**. Fenced code blocks are highlighted:
-
-\`\`\`ts
-export function greet(name: string): string {
-  return \`Hello, \${name}\`;
-}
-\`\`\`
-
-> Tip: \`##\` and \`###\` headings become the table of contents automatically.
-`;
+const STARTER = `<h2>Getting started</h2><p>Write like in a document editor — headings, <strong>bold</strong>, lists, quotes and code from the toolbar. Insert an image to crop it, then drag it anywhere, resize it by its corner handle, and align it left or right so text wraps around it.</p>`;
 
 /** ISO → the `yyyy-MM-ddTHH:mm` a datetime-local input expects, in local time. */
 function toLocalInput(iso?: string): string {
@@ -73,9 +62,14 @@ function toLocalInput(iso?: string): string {
   )}:${pad(d.getMinutes())}`;
 }
 
-/** Rough live counts. The server recomputes both on save — these are feedback. */
-function stats(markdown: string) {
-  const words = markdown.trim() ? markdown.trim().split(/\s+/).length : 0;
+/** Rough live counts off the HTML. The server recomputes both on save. */
+function stats(html: string) {
+  const text = html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = text ? text.split(/\s+/).length : 0;
   return { words, minutes: Math.max(1, Math.ceil(words / 220)) };
 }
 
@@ -150,7 +144,7 @@ export default function BlogEditorPage() {
   const [previewToken, setPreviewToken] = useState<string | undefined>();
   const [slug, setSlug] = useState<string | undefined>();
 
-  const [mode, setMode] = useState<Mode>('write');
+  const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -181,10 +175,16 @@ export default function BlogEditorPage() {
     setLoading(true);
     getPost(id!)
       .then((p) => {
+        // Legacy posts are Markdown; convert once so the rich-text editor can
+        // work on them. The next save stores the post as HTML.
+        const content =
+          p.contentFormat === 'html'
+            ? (p.content ?? '')
+            : String(marked.parse(p.content ?? '', { async: false }));
         setForm({
           title: p.title,
           excerpt: p.excerpt,
-          content: p.content ?? '',
+          content,
           categoryId: p.categoryId ?? '',
           tags: p.tags.join(', '),
           seriesId: p.seriesId ?? '',
@@ -229,6 +229,7 @@ export default function BlogEditorPage() {
       title: form.title.trim(),
       excerpt: form.excerpt.trim(),
       content: form.content,
+      contentFormat: 'html',
       categoryId: form.categoryId,
       tags: form.tags
         .split(',')
@@ -344,12 +345,6 @@ export default function BlogEditorPage() {
     );
   }
 
-  const MODES: Array<{ key: Mode; label: string; icon: typeof PenLine }> = [
-    { key: 'write', label: 'Write', icon: PenLine },
-    { key: 'preview', label: 'Preview', icon: Eye },
-    { key: 'split', label: 'Split', icon: PanelsTopBottom },
-  ];
-
   return (
     <div className="space-y-5">
       <Link
@@ -373,6 +368,9 @@ export default function BlogEditorPage() {
                 <Trash2 className="h-4 w-4" /> Delete
               </Button>
             )}
+            <Button size="sm" variant="secondary" onClick={() => setShowPreview(true)}>
+              <Eye className="h-4 w-4" /> Preview
+            </Button>
             <Button
               size="sm"
               variant="secondary"
@@ -416,58 +414,23 @@ export default function BlogEditorPage() {
           </div>
 
           <div className="glass-card overflow-hidden">
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5">
-              <div className="flex gap-1">
-                {MODES.map((m) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setMode(m.key)}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition',
-                      mode === m.key
-                        ? 'bg-white/[0.1] text-white'
-                        : 'text-slate-400 hover:bg-white/[0.05] hover:text-white',
-                      // Split needs the width; hide the option on small screens.
-                      m.key === 'split' && 'hidden lg:inline-flex',
-                    )}
-                  >
-                    <m.icon className="h-3.5 w-3.5" />
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
+              <p className="text-xs text-slate-500">
+                Insert an image to crop it — then drag it anywhere, resize it by
+                the corner handle, and align it so text wraps around it.
+              </p>
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
                 <Clock className="h-3.5 w-3.5" />
                 {counts.minutes} min
               </span>
             </div>
 
-            <div
-              className={cn(
-                'grid',
-                mode === 'split' ? 'lg:grid-cols-2 lg:divide-x lg:divide-white/10' : 'grid-cols-1',
-              )}
-            >
-              {mode !== 'preview' && (
-                <textarea
-                  value={form.content}
-                  onChange={set('content')}
-                  spellCheck={false}
-                  placeholder="Write in Markdown…"
-                  className="min-h-[28rem] w-full resize-y bg-transparent p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none placeholder:text-slate-600"
-                />
-              )}
-              {mode !== 'write' && (
-                <div className="min-h-[28rem] overflow-x-auto p-5">
-                  {form.content.trim() ? (
-                    <Markdown content={form.content} />
-                  ) : (
-                    <p className="text-sm text-slate-500">Nothing to preview yet.</p>
-                  )}
-                </div>
-              )}
-            </div>
+            <RichTextEditor
+              value={form.content}
+              onChange={(html) => setForm((f) => ({ ...f, content: html }))}
+              onUploadImage={uploadEditorImage}
+              placeholder="Start writing your post…"
+            />
           </div>
         </div>
 
@@ -626,6 +589,77 @@ export default function BlogEditorPage() {
           </Panel>
         </div>
       </div>
+
+      {/* ------------------------ full-post preview ------------------------ */}
+      {showPreview &&
+        createPortal(
+          <div className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-8">
+            <div
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setShowPreview(false)}
+            />
+            <div className="glass-card relative z-10 mx-auto my-4 w-full max-w-3xl p-6 sm:p-10">
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  <Eye className="h-3.5 w-3.5" /> Preview — how readers will see it
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  aria-label="Close preview"
+                  className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <article>
+                {coverPreview && (
+                  <img
+                    src={coverPreview}
+                    alt={form.featuredImageAlt || ''}
+                    className="mb-6 max-h-80 w-full rounded-2xl border border-white/10 object-cover"
+                  />
+                )}
+                <h1 className="font-display text-3xl font-bold leading-tight text-white">
+                  {form.title || 'Untitled post'}
+                </h1>
+                <p className="mt-2 text-sm text-slate-500">
+                  {counts.words.toLocaleString()} words · {counts.minutes} min read
+                </p>
+                {form.excerpt.trim() && (
+                  <p className="mt-4 text-base italic leading-relaxed text-slate-400">
+                    {form.excerpt}
+                  </p>
+                )}
+                <div className="mt-6 border-t border-white/10 pt-6">
+                  {form.content.trim() ? (
+                    <PostContent content={form.content} format="html" />
+                  ) : (
+                    <p className="text-sm text-slate-500">Nothing to preview yet.</p>
+                  )}
+                </div>
+                {form.tags.trim() && (
+                  <div className="mt-8 flex flex-wrap gap-1.5 border-t border-white/10 pt-5">
+                    {form.tags
+                      .split(',')
+                      .map((t) => t.trim())
+                      .filter(Boolean)
+                      .map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-slate-300 ring-1 ring-white/10"
+                        >
+                          #{t.toLowerCase()}
+                        </span>
+                      ))}
+                  </div>
+                )}
+              </article>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

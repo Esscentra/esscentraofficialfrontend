@@ -27,6 +27,8 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { PasswordStrength } from '@/components/PasswordStrength';
 import { useToast } from '@/components/ui/Toast';
+import { EarningsPanel } from '@/components/finance/EarningsPanel';
+import { InvestorSummary } from '@/components/finance/InvestorSummary';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/lib/api';
 import { changePassword } from '@/lib/authApi';
@@ -109,6 +111,20 @@ export default function Profile() {
         <input ref={fileRef} type="file" accept="image/*" onChange={onAvatar} className="hidden" />
 
         <KycBanner status={u.kycStatus} />
+
+        {/*
+          The investor-only half of this page — verified identity and position.
+          This is the former "My profile" screen, folded in here so there is one
+          profile page rather than two that can disagree. It renders nothing for
+          an account with no investor position.
+        */}
+        <InvestorSummary className="mt-6" />
+
+        {/*
+          Own earnings only — the endpoint reads the account from the session,
+          so this renders nothing for a role with no stake in the waterfall.
+        */}
+        <EarningsPanel className="mt-6" />
 
 
         {/* Tabs */}

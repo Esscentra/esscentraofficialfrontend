@@ -5,6 +5,7 @@ import {
   ProtectedRoute,
   StaffRoute,
   SuperAdminRoute,
+  EcosystemRoute,
   WorkspaceRoute,
 } from './components/ProtectedRoute';
 import Login from './pages/Login';
@@ -34,6 +35,7 @@ import UsersPage from './pages/app/Users';
 import KycReviewPage from './pages/app/KycReview';
 import InvestmentsPage from './pages/app/Investments';
 import CommitmentsPage from './pages/app/Commitments';
+import GithubReposPage from './pages/app/GithubRepos';
 
 /* ------------------------- investor workspace ------------------------- */
 // The read-only stakeholder's own dashboard: their position, the company's
@@ -52,7 +54,6 @@ import InvestorShareValuePage from './pages/app/investor/ShareValue';
 import InvestorPaymentsPage from './pages/app/investor/PaymentHistory';
 import InvestorDocumentsPage from './pages/app/investor/Documents';
 import InvestorNotificationsPage from './pages/app/investor/Notifications';
-import InvestorProfilePage from './pages/app/investor/Profile';
 import InvestorSettingsPage from './pages/app/investor/Settings';
 
 /* --------------------------- finance admin ---------------------------- */
@@ -65,6 +66,7 @@ import DocumentsAdminPage from './pages/app/finance/DocumentsAdmin';
 import AuditLogPage from './pages/app/finance/AuditLog';
 import InvoicesPage from './pages/app/finance/Invoices';
 import MarketerPaymentsAdminPage from './pages/app/finance/MarketerPayments';
+import EcosystemPage from './pages/app/ecosystem/Ecosystem';
 import MarketerOverviewPage from './pages/app/marketer/Overview';
 import MarketerTasksPage from './pages/app/marketer/Tasks';
 import MarketerDocumentsPage from './pages/app/marketer/Documents';
@@ -155,6 +157,9 @@ export default function App() {
         <Route index element={<Dashboard />} />
 
         {/* Admin governance pages */}
+        {/* Holding-company view: super admin manages, investor reads. */}
+        <Route path="ecosystem" element={<EcosystemRoute><EcosystemPage /></EcosystemRoute>} />
+
         <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="kyc-review" element={<AdminRoute><KycReviewPage /></AdminRoute>} />
         <Route path="investments" element={<AdminRoute><InvestmentsPage /></AdminRoute>} />
@@ -197,7 +202,15 @@ export default function App() {
         <Route path="investor/payments" element={<InvestorPaymentsPage />} />
         <Route path="investor/documents" element={<InvestorDocumentsPage />} />
         <Route path="investor/notifications" element={<InvestorNotificationsPage />} />
-        <Route path="investor/profile" element={<InvestorProfilePage />} />
+        {/*
+          The investor profile was merged into the single /profile page, so
+          there is one profile screen rather than two. Redirected rather than
+          removed so existing bookmarks and emailed links still land somewhere.
+        */}
+        <Route
+          path="investor/profile"
+          element={<Navigate to="/profile" replace />}
+        />
         <Route path="investor/settings" element={<InvestorSettingsPage />} />
 
         {/* Contractor workspace. Not admin gated — this IS the freelance
@@ -227,6 +240,8 @@ export default function App() {
         />
         {/* Super-admin only: managing role types */}
         <Route path="roles" element={<SuperAdminRoute><RolesPage /></SuperAdminRoute>} />
+        {/* Super-admin only: the company GitHub account, private repos included. */}
+        <Route path="github" element={<SuperAdminRoute><GithubReposPage /></SuperAdminRoute>} />
 
         {/* Operational CRM pages — blocked for read-only INVESTOR accounts */}
         <Route path="leads" element={<StaffRoute><LeadsPage /></StaffRoute>} />

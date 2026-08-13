@@ -10,10 +10,17 @@ import {
   ExportButtons,
   Pill,
   RangeFilter,
+  Section,
   SelectControl,
   statusTone,
   type DateRange,
 } from '@/components/finance/Controls';
+import {
+  downloadExpenseAttachment,
+  getFundExpenseLedger,
+  type FundExpenseLedger,
+  type FundExpenseRow,
+} from '@/lib/commitmentApi';
 import { CardGridSkeleton, ErrorState, TableSkeleton } from '@/components/finance/States';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -81,6 +88,13 @@ export default function ExpensesAdmin() {
         limit: 200,
       }),
     [range.from, range.to, status, category],
+  );
+
+  // "Money spent from this fund" records (Commitments page) — shown below the
+  // business expenses for reference. They never reduce net profit.
+  const fund = useInvestorData<FundExpenseLedger>(
+    () => getFundExpenseLedger(range),
+    [range.from, range.to],
   );
 
   const submit = async (event: React.FormEvent) => {
@@ -383,6 +397,115 @@ export default function ExpensesAdmin() {
               </>
             }
           />
+
+          {fund.data && fund.data.rows.length > 0 && (
+            <Section
+              title="Investor fund spend"
+              description="Money spent from investors' committed funds — recorded and managed on the Commitments page. Shown here for reference; it is capital deployment, not an operating cost, so it never reduces net profit."
+            >
+              <FinanceTable<FundExpenseRow>
+                rows={fund.data.rows}
+                rowKey={(row) => row.id}
+                emptyTitle="No fund spend recorded"
+                emptyMessage="Expenses recorded against commitments will appear here."
+                maxHeight={520}
+                columns={[
+                  {
+                    key: 'date',
+                    header: 'Date',
+                    render: (row) => (
+                      <span className="whitespace-nowrap text-slate-300">
+                        {row.spentAt ? formatDate(row.spentAt) : '—'}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'investor',
+                    header: 'Investor',
+                    render: (row) => (
+                      <div className="min-w-0">
+                        <p className="truncate text-slate-200">
+                          {row.investorName ?? '—'}
+                        </p>
+                        {row.commitmentTitle && (
+                          <p className="truncate text-xs text-slate-500">
+                            {row.commitmentTitle}
+                          </p>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'category',
+                    header: 'Category',
+                    render: (row) => <Pill tone="blue">{humanize(row.category)}</Pill>,
+                  },
+                  {
+                    key: 'description',
+                    header: 'Description',
+                    render: (row) => (
+                      <div className="min-w-0">
+                        <p className="truncate text-slate-200">{row.description || '—'}</p>
+                        {row.attachments.length > 0 && (
+                          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                            {row.attachments.map((file, index) =>
+                              file.available ? (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() =>
+                                    void downloadExpenseAttachment(row.id, index, file.name)
+                                  }
+                                  className="text-[11px] text-brand-300 underline-offset-2 hover:underline"
+                                >
+                                  {file.name}
+                                </button>
+                              ) : (
+                                <span
+                                  key={index}
+                                  className="text-[11px] text-slate-600 line-through"
+                                  title="File no longer stored"
+                                >
+                                  {file.name}
+                                </span>
+                              ),
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    numeric: true,
+                    render: (row) => (
+                      <span className="font-semibold text-white">{inr(row.amount)}</span>
+                    ),
+                  },
+                  {
+                    key: 'recordedBy',
+                    header: 'Recorded by',
+                    hideOnMobile: true,
+                    render: (row) => (
+                      <span className="text-slate-400">{row.recordedByName ?? '—'}</span>
+                    ),
+                  },
+                ]}
+                footer={
+                  <>
+                    <TotalCell numeric={false} colSpan={4}>
+                      Total spent from funds
+                    </TotalCell>
+                    <TotalCell>{inr(fund.data.totals.total)}</TotalCell>
+                    <TotalCell numeric={false} hideOnMobile>
+                      <span />
+                    </TotalCell>
+                  </>
+                }
+              />
+            </Section>
+          )}
         </>
       )}
 

@@ -20,8 +20,10 @@ import {
   updateProject,
   type ProjectInput,
 } from '@/lib/projectApi';
+import { listAccounts } from '@/lib/accountApi';
+import { listUsers } from '@/lib/adminApi';
 import { getErrorMessage, isSuperAdminRole } from '@/lib/utils';
-import type { Project, ProjectStatus } from '@/types';
+import type { Account, Project, ProjectStatus, User } from '@/types';
 
 const STATUSES: ProjectStatus[] = ['PLANNED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
 
@@ -59,6 +61,8 @@ export default function ProjectsPage() {
   const canManage = isSuperAdminRole(user?.role);
 
   const [items, setItems] = useState<Project[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [staff, setStaff] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
@@ -74,6 +78,26 @@ export default function ProjectsPage() {
 
   useEffect(load, [load]);
 
+  // Pickers for the create/edit form. Super admin only, and best-effort — if
+  // either list fails the page still works, the form just loses that dropdown.
+  useEffect(() => {
+    if (!canManage) return;
+    listAccounts()
+      .then(setAccounts)
+      .catch(() => setAccounts([]));
+    listUsers()
+      .then((all) =>
+        setStaff(
+          // Leads and team members are our people — clients and investors
+          // are never staffed onto a project.
+          all.filter(
+            (u) => !['CLIENT', 'INVESTOR'].includes((u.role ?? '').toUpperCase()),
+          ),
+        ),
+      )
+      .catch(() => setStaff([]));
+  }, [canManage]);
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -84,6 +108,11 @@ export default function ProjectsPage() {
       startDate: String(f.get('startDate') ?? ''),
       endDate: String(f.get('endDate') ?? ''),
       budget: Number(f.get('budget') ?? 0) || undefined,
+      // '' is deliberate: projectApi turns it into null, which CLEARS the
+      // link server-side — picking "Internal" on an edit detaches the client.
+      accountId: String(f.get('accountId') ?? ''),
+      projectLeadId: String(f.get('projectLeadId') ?? ''),
+      teamMemberIds: f.getAll('teamMemberIds').map(String),
     };
     if (!input.name) return;
 
@@ -251,8 +280,33 @@ export default function ProjectsPage() {
           }}
           title={editing ? 'Edit project' : 'New project'}
         >
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form
+            key={editing?.id ?? 'new'}
+            onSubmit={onSubmit}
+            className="space-y-4"
+          >
             <Input label="Name" name="name" defaultValue={editing?.name} required />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Client company"
+                name="accountId"
+                defaultValue={editing?.accountId ?? ''}
+                options={[
+                  { value: '', label: 'Internal — no client' },
+                  ...accounts.map((a) => ({ value: a.id, label: a.companyName })),
+                ]}
+              />
+              <Select
+                label="Project lead"
+                name="projectLeadId"
+                defaultValue={editing?.projectLeadId ?? ''}
+                options={[
+                  { value: '', label: 'Not assigned' },
+                  ...staff.map((u) => ({ value: u.id, label: u.name })),
+                ]}
+              />
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Select
@@ -292,6 +346,39 @@ export default function ProjectsPage() {
               name="description"
               defaultValue={editing?.description}
             />
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-300">Team members</p>
+              {staff.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  No staff to pick from yet — add users first.
+                </p>
+              ) : (
+                <div className="max-h-44 space-y-0.5 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
+                  {staff.map((u) => (
+                    <label
+                      key={u.id}
+                      className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-slate-200 hover:bg-white/[0.06]"
+                    >
+                      <input
+                        type="checkbox"
+                        name="teamMemberIds"
+                        value={u.id}
+                        defaultChecked={editing?.teamMemberIds?.includes(u.id)}
+                        className="h-4 w-4 accent-brand-500"
+                      />
+                      <span className="min-w-0 truncate">{u.name}</span>
+                      <span className="ml-auto shrink-0 text-[11px] text-slate-500">
+                        {humanize(u.role ?? '')}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                The client portal only ever shows the head-count, never the names.
+              </p>
+            </div>
 
             <div className="flex justify-end gap-3 pt-2">
               <Button

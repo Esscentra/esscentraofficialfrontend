@@ -90,6 +90,25 @@ export function StaffRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Guards the Ecosystem hub — the holding-company view. Super admin runs it;
+ * the investor reads it. Everyone else (including ADMIN) is sent back:
+ * founder revenue splits are between the founders and their investor.
+ */
+export function EcosystemRoute({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <FullPageLoader />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  if (!isSuperAdminRole(user?.role) && !isInvestorRole(user?.role)) {
+    return <Navigate to="/app" replace />;
+  }
+  return <>{children}</>;
+}
+
 /** Redirects already-authenticated users away from auth screens. */
 export function GuestRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, loading } = useAuth();

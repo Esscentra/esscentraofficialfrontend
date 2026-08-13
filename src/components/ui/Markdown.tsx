@@ -69,6 +69,34 @@ function Pre({ children, className, ...props }: ComponentPropsWithoutRef<'pre'>)
  * on, and nothing in a developer blog needs inline HTML that Markdown can't
  * already express.
  */
+/**
+ * The post typography, shared by the Markdown renderer below and the
+ * rich-text (HTML) renderer in PostContent — one look, two formats.
+ */
+export const PROSE_CLASSES = cn(
+  // `post-prose` is the hook for the per-theme colour rules in index.css —
+  // the Tailwind colour classes below are the dark-theme look.
+  'post-prose max-w-none text-[15px] leading-7 text-slate-300',
+  '[&_h1]:mb-4 [&_h1]:mt-8 [&_h1]:font-display [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-white',
+  '[&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-white',
+  '[&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:scroll-mt-24 [&_h3]:font-display [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-white',
+  '[&_h4]:mb-2 [&_h4]:mt-5 [&_h4]:font-semibold [&_h4]:text-slate-100',
+  '[&_p]:my-4',
+  '[&_a]:font-medium [&_a]:text-brand-300 [&_a]:underline [&_a]:decoration-brand-400/40 [&_a]:underline-offset-2 hover:[&_a]:text-brand-200',
+  '[&_strong]:font-semibold [&_strong]:text-white',
+  '[&_ul]:my-4 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-6',
+  '[&_ol]:my-4 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-6',
+  '[&_li]:marker:text-slate-600',
+  '[&_blockquote]:my-5 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-400/50 [&_blockquote]:bg-white/[0.02] [&_blockquote]:py-1 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-400',
+  '[&_hr]:my-8 [&_hr]:border-white/10',
+  '[&_img]:rounded-xl [&_img]:border [&_img]:border-white/10',
+  '[&_:not(pre)>code]:rounded-md [&_:not(pre)>code]:border [&_:not(pre)>code]:border-white/10 [&_:not(pre)>code]:bg-white/[0.06] [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:text-[13px] [&_:not(pre)>code]:text-brand-200',
+  '[&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-white/10 [&_pre]:bg-[#0b1020] [&_pre]:p-4 [&_pre]:text-[13px] [&_pre]:leading-relaxed',
+  '[&_table]:my-5 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm',
+  '[&_th]:border-b [&_th]:border-white/15 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-slate-200',
+  '[&_td]:border-b [&_td]:border-white/5 [&_td]:px-3 [&_td]:py-2',
+);
+
 export function Markdown({
   content,
   className,
@@ -79,28 +107,9 @@ export function Markdown({
   return (
     <div
       className={cn(
-        'max-w-none text-[15px] leading-7 text-slate-300',
-        // Headings — anchor ids come from rehype-slug, matching the server's TOC.
-        '[&_h1]:mb-4 [&_h1]:mt-8 [&_h1]:font-display [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-white',
-        '[&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-white',
-        '[&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:scroll-mt-24 [&_h3]:font-display [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-white',
-        '[&_h4]:mb-2 [&_h4]:mt-5 [&_h4]:font-semibold [&_h4]:text-slate-100',
-        // Body
-        '[&_p]:my-4',
-        '[&_a]:font-medium [&_a]:text-brand-300 [&_a]:underline [&_a]:decoration-brand-400/40 [&_a]:underline-offset-2 hover:[&_a]:text-brand-200',
-        '[&_strong]:font-semibold [&_strong]:text-white',
-        '[&_ul]:my-4 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-6',
-        '[&_ol]:my-4 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-6',
-        '[&_li]:marker:text-slate-600',
-        '[&_blockquote]:my-5 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-400/50 [&_blockquote]:bg-white/[0.02] [&_blockquote]:py-1 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-400',
-        '[&_hr]:my-8 [&_hr]:border-white/10',
-        '[&_img]:my-5 [&_img]:rounded-xl [&_img]:border [&_img]:border-white/10',
-        // Inline code only — the `pre > code` inside a block is left to hljs.
-        '[&_:not(pre)>code]:rounded-md [&_:not(pre)>code]:border [&_:not(pre)>code]:border-white/10 [&_:not(pre)>code]:bg-white/[0.06] [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:text-[13px] [&_:not(pre)>code]:text-brand-200',
-        // Tables (GFM)
-        '[&_table]:my-5 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm',
-        '[&_th]:border-b [&_th]:border-white/15 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-slate-200',
-        '[&_td]:border-b [&_td]:border-white/5 [&_td]:px-3 [&_td]:py-2',
+        PROSE_CLASSES,
+        // Markdown images have no per-image layout; give them block spacing.
+        '[&_img]:my-5',
         className,
       )}
     >

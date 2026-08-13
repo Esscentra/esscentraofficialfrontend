@@ -440,5 +440,80 @@ export async function linkExpenseInvoice(
   await api.patch(`/commitments/expenses/${expenseId}/invoice`, { invoiceId });
 }
 
+/* ----------------------- Fund-spend ledger (admin) ------------------------ */
+
+interface RawFundExpenseRow {
+  id: string;
+  commitmentId: string;
+  commitmentTitle: string | null;
+  investorName: string | null;
+  category: string;
+  description: string;
+  amount: number;
+  currency: string;
+  spentAt?: string;
+  recordedByName: string | null;
+  attachments?: RawAttachment[];
+  invoiceDoc: { id: string; number: string; kind: string; status: string } | null;
+}
+
+interface RawFundExpenseLedger {
+  totals: { total: number; count: number };
+  rows: RawFundExpenseRow[];
+}
+
+/** One "money spent from this fund" record, flattened across commitments. */
+export interface FundExpenseRow {
+  id: string;
+  commitmentId: string;
+  commitmentTitle: string | null;
+  investorName: string | null;
+  category: string;
+  description: string;
+  amount: number;
+  currency: string;
+  spentAt?: string;
+  recordedByName: string | null;
+  attachments: ExpenseAttachment[];
+  invoiceDoc: { id: string; number: string; kind: string; status: string } | null;
+}
+
+export interface FundExpenseLedger {
+  totals: { total: number; count: number };
+  rows: FundExpenseRow[];
+}
+
+/**
+ * GET /commitments/expenses/ledger  (admin) — every "money spent from this
+ * fund" record across all commitments, for the finance Business Expenses page.
+ * Shown for reference only: fund spend never reduces net profit.
+ */
+export async function getFundExpenseLedger(
+  range: { from?: string; to?: string } = {},
+): Promise<FundExpenseLedger> {
+  const params = new URLSearchParams();
+  if (range.from) params.set('from', range.from);
+  if (range.to) params.set('to', range.to);
+  const query = params.toString();
+
+  const { data } = await api.get<ApiResponse<RawFundExpenseLedger>>(
+    `/commitments/expenses/ledger${query ? `?${query}` : ''}`,
+  );
+
+  const raw = data.data ?? { totals: { total: 0, count: 0 }, rows: [] };
+  return {
+    totals: raw.totals,
+    rows: (raw.rows ?? []).map((row) => ({
+      ...row,
+      attachments: (row.attachments ?? []).map((a, i) => ({
+        url: a.url,
+        isPdf: a.resourceType === 'raw' || a.mimeType === 'application/pdf',
+        name: a.originalName || `proof-${i + 1}`,
+        available: !a.unavailable,
+      })),
+    })),
+  };
+}
+
 /** Re-export for convenience where both ledgers are shown together. */
 export type { Investment };

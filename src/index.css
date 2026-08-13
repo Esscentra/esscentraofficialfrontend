@@ -747,3 +747,60 @@ html[data-theme='light'] .hero-banner [class*='text-brand-1'],
 html[data-theme='reading'] .hero-banner [class*='text-brand-1'],
 html[data-theme='light'] .brand-panel [class*='text-brand-1'],
 html[data-theme='reading'] .brand-panel [class*='text-brand-1'] { color: #d9e7ff; }
+
+/* =========================  POST PROSE (blog)  ============================ */
+/* Theme-correct colours for rendered post content and the rich-text editor.
+   The Tailwind prose classes carry the DARK look; these rules re-colour the
+   same elements for light/reading. They live after the generic accent
+   remaps above so they win over substring matches like [class*='text-brand-3']
+   that would otherwise paint the whole article blue. An admin-chosen colour
+   is an inline style on the span, so it beats all of this in every theme. */
+
+html[data-theme='light'] .post-prose {
+  color: #1f2937;
+}
+html[data-theme='light'] .post-prose :is(h1, h2, h3, h4, strong) {
+  color: #0b1220;
+}
+html[data-theme='light'] .post-prose blockquote {
+  color: #475569;
+  background: rgba(15, 23, 42, 0.03);
+}
+html[data-theme='light'] .post-prose a {
+  color: #064ce2;
+}
+html[data-theme='light'] .post-prose li::marker {
+  color: #8b95a6;
+}
+html[data-theme='light'] .post-prose :not(pre) > code {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(13, 27, 62, 0.12);
+  color: #0c42b9;
+}
+
+html[data-theme='reading'] .post-prose {
+  color: #5b4a33;
+}
+html[data-theme='reading'] .post-prose :is(h1, h2, h3, h4, strong) {
+  color: #2f2617;
+}
+html[data-theme='reading'] .post-prose blockquote {
+  color: #6b573c;
+  background: rgba(91, 70, 40, 0.05);
+}
+html[data-theme='reading'] .post-prose a {
+  color: #955f14;
+}
+html[data-theme='reading'] .post-prose li::marker {
+  color: #a08a68;
+}
+html[data-theme='reading'] .post-prose :not(pre) > code {
+  background: rgba(91, 70, 40, 0.07);
+  border-color: rgba(120, 92, 52, 0.2);
+  color: #7a4c0e;
+}
+
+/* The editor's placeholder needs to stay readable on light surfaces too. */
+html[data-theme='light'] .post-prose p.is-editor-empty:first-child::before {
+  color: #9aa6b8;
+}

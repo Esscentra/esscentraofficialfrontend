@@ -36,6 +36,8 @@ interface RawProject {
   createdAt?: string;
   ownerId?: RawNamed | string;
   accountId?: RawNamed | string;
+  projectLeadId?: RawNamed | string;
+  teamMemberIds?: Array<RawNamed | string>;
   taskCount?: number;
 }
 
@@ -43,6 +45,11 @@ function personName(ref?: RawNamed | string): string | undefined {
   if (!ref || typeof ref === 'string') return undefined;
   const name = [ref.firstName, ref.lastName].filter(Boolean).join(' ').trim();
   return name || undefined;
+}
+
+function refId(ref?: RawNamed | string): string | undefined {
+  if (!ref) return undefined;
+  return typeof ref === 'string' ? ref : ref._id ? String(ref._id) : undefined;
 }
 
 function mapProject(p: RawProject): Project {
@@ -58,6 +65,12 @@ function mapProject(p: RawProject): Project {
     ownerName: personName(p.ownerId),
     accountName:
       typeof p.accountId === 'object' ? p.accountId?.companyName : undefined,
+    accountId: refId(p.accountId),
+    projectLeadId: refId(p.projectLeadId),
+    projectLeadName: personName(p.projectLeadId),
+    teamMemberIds: (p.teamMemberIds ?? [])
+      .map(refId)
+      .filter((id): id is string => Boolean(id)),
     taskCount: p.taskCount,
   };
 }
@@ -119,6 +132,10 @@ export interface ProjectInput {
   startDate?: string;
   endDate?: string;
   budget?: number;
+  /** The client company this project is delivered for ('' clears the link). */
+  accountId?: string;
+  projectLeadId?: string;
+  teamMemberIds?: string[];
 }
 
 /** Empty strings become nulls so a cleared date actually clears. */

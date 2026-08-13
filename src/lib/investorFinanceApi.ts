@@ -227,6 +227,36 @@ export interface ExpenseRow {
   isRecurring: boolean;
 }
 
+/** Proof file on a fund expense (screenshot / bank receipt / invoice bill). */
+export interface FundSpendAttachment {
+  url: string;
+  originalName: string | null;
+  mimeType: string | null;
+  resourceType: 'image' | 'raw';
+  /** True when the file's storage account is no longer connected. */
+  unavailable?: boolean;
+}
+
+/**
+ * One "money spent from this fund" record (kept by the admin on the
+ * Commitments page), flattened for the expense dashboard.
+ */
+export interface FundSpendRow {
+  id: string;
+  commitmentId: string;
+  commitmentTitle: string | null;
+  investorName: string | null;
+  category: string;
+  description: string;
+  amount: number;
+  currency: string;
+  spentAt: string;
+  recordedByName: string | null;
+  attachments: FundSpendAttachment[];
+  /** Generated invoice/bill linked to this expense, if any. */
+  invoiceDoc: { id: string; number: string; kind: string; status: string } | null;
+}
+
 export interface ExpenseView {
   totals: {
     totalExpenses: number;
@@ -236,10 +266,20 @@ export interface ExpenseView {
     rejectedAmount: number;
     paidAmount: number;
     unpaidApprovedAmount: number;
+    /** Where the recognised spend came from — the three sources add to total. */
+    businessExpenseAmount: number;
+    vendorBillAmount: number;
+    contractorPaymentAmount: number;
     currency: string;
   };
   byCategory: Array<{ category: string; label: string; total: number; count: number }>;
   rows: ExpenseRow[];
+  /**
+   * Money spent out of THIS investor's committed funds — shown for
+   * transparency. Deliberately not part of `totals`: fund deployment is not an
+   * operating cost, so it never reduces net profit.
+   */
+  fundSpend?: { totals: { total: number; count: number }; rows: FundSpendRow[] };
   currency: string;
 }
 

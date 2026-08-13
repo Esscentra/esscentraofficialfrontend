@@ -74,6 +74,12 @@ export interface Project {
   /** Populated names from the backend. */
   ownerName?: string;
   accountName?: string;
+  projectLeadName?: string;
+
+  /** Raw ids — these are what pre-fill the edit form. */
+  accountId?: string;
+  projectLeadId?: string;
+  teamMemberIds?: string[];
 
   /** How many tasks are filed under this project. */
   taskCount?: number;
@@ -332,8 +338,10 @@ export interface BlogPost {
   title: string;
   slug: string;
   excerpt: string;
-  /** GitHub-flavoured Markdown. Absent from list responses. */
+  /** Post body — Markdown (legacy) or editor HTML. Absent from list responses. */
   content?: string;
+  /** How `content` is encoded; check before rendering. */
+  contentFormat?: 'markdown' | 'html';
 
   featuredImage?: string;
   featuredImageAlt?: string;

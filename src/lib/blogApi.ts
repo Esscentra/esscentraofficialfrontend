@@ -55,6 +55,7 @@ interface RawPost {
   slug: string;
   excerpt: string;
   content?: string;
+  contentFormat?: 'markdown' | 'html';
   featuredImage?: string;
   featuredImageAlt?: string;
   ogImage?: string;
@@ -123,6 +124,7 @@ function mapPost(p: RawPost): BlogPost {
     slug: p.slug,
     excerpt: p.excerpt,
     content: p.content,
+    contentFormat: p.contentFormat ?? 'markdown',
     featuredImage: p.featuredImage,
     featuredImageAlt: p.featuredImageAlt,
     ogImage: p.ogImage,
@@ -236,6 +238,8 @@ export interface PostInput {
   title: string;
   excerpt?: string;
   content: string;
+  /** "html" for the rich-text editor; omit/"markdown" for legacy sources. */
+  contentFormat?: 'markdown' | 'html';
   categoryId: string;
   tags?: string[];
   featuredImageAlt?: string;
@@ -267,6 +271,7 @@ function toFormData(input: Partial<PostInput>): FormData {
   append('title', input.title);
   append('excerpt', input.excerpt);
   append('content', input.content);
+  append('contentFormat', input.contentFormat);
   append('categoryId', input.categoryId);
   append('featuredImageAlt', input.featuredImageAlt);
   append('ogImage', input.ogImage);
@@ -317,6 +322,21 @@ export async function updatePost(
 
 export async function deletePost(id: string): Promise<void> {
   await api.delete(`/blog/${id}`);
+}
+
+/**
+ * POST /blog/admin/images — upload one inline image for the rich-text editor
+ * and get back its permanent URL to insert into the document.
+ */
+export async function uploadEditorImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('image', file);
+  const { data } = await api.post<ApiResponse<{ url: string }>>(
+    '/blog/admin/images',
+    form,
+    MULTIPART,
+  );
+  return data.data.url;
 }
 
 /* -------------------------------- taxonomy -------------------------------- */

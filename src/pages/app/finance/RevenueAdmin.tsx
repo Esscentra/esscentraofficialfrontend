@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, Clock, IndianRupee, Plus, Receipt, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -27,6 +27,10 @@ import {
   type RevenueRecord,
   type RevenueStatus,
 } from '@/lib/financeApi';
+import {
+  getEcosystemOverview,
+  type EcosystemOverview,
+} from '@/lib/ecosystemApi';
 import { useInvestorData } from '../investor/useInvestorData';
 import { getErrorMessage } from '@/lib/utils';
 import { formatDate, humanize, inr } from '@/lib/format';
@@ -192,6 +196,8 @@ export default function RevenueAdmin() {
         <ErrorState message={error ?? 'No data was returned.'} onRetry={reload} />
       ) : (
         <>
+          <OverallRevenue />
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <FinanceCard
               icon={IndianRupee}
@@ -421,6 +427,88 @@ export default function RevenueAdmin() {
           </div>
         </form>
       </Modal>
+    </div>
+  );
+}
+
+/* ---------------------------- overall revenue ----------------------------- */
+
+/**
+ * The whole parent platform's revenue, above the client-payment ledger below.
+ *
+ * The cards below this strip are scoped to what this screen records — client
+ * payments. This strip is the complete picture Esscentra earns: those client
+ * payments plus every child platform's revenue.
+ *
+ * Investor capital is shown apart from that total, and greyed, because it is
+ * not revenue: it is money raised against equity, not money earned. Adding it
+ * to the top line would overstate revenue, overstate profit, and then pay each
+ * investor a share of their own contribution back through the parent split.
+ *
+ * It reads the ecosystem endpoint, which is restricted to super admins and
+ * investors. For any other admin the request simply fails and the strip stays
+ * hidden rather than showing an error over a page that is working fine.
+ */
+function OverallRevenue() {
+  const [totals, setTotals] = useState<EcosystemOverview['totals'] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getEcosystemOverview()
+      .then((data) => {
+        if (alive) setTotals(data.totals);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!totals) return null;
+
+  return (
+    <section className="glass-card p-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Overall revenue — Esscentra parent platform
+          </p>
+          <p className="mt-1 text-3xl font-bold tracking-tight text-white">
+            {inr(totals.ecosystemGross)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Everything the group has earned, gross
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <Figure label="Client payments" value={totals.clientPayments} />
+          <Figure label="Child platforms" value={totals.childGross} />
+        </div>
+      </div>
+
+      {totals.investorCapital > 0 && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <p className="text-xs text-slate-500">
+            <span className="font-semibold text-slate-400">
+              {inr(totals.investorCapital)}
+            </span>{' '}
+            of investor capital has been raised. It is not revenue and is not
+            included in the figures above.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Figure({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+      <p className="mt-0.5 text-lg font-bold tabular-nums text-white">{inr(value)}</p>
     </div>
   );
 }

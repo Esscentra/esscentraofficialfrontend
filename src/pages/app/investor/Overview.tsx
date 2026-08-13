@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { FinanceCard } from '@/components/finance/FinanceCard';
+import { EarningsPanel } from '@/components/finance/EarningsPanel';
 import { CardGridSkeleton, ChartSkeleton, ErrorState, InfoNote } from '@/components/finance/States';
 import { ProgressBar } from '@/components/charts/CircularProgress';
 import { ChartFrame } from '@/components/charts/ChartFrame';
@@ -129,6 +130,13 @@ export default function InvestorOverview() {
           entered.
         </InfoNote>
       )}
+
+      {/*
+        What this investor has earned from the ecosystem — their entitlement
+        to the Esscentra pool plus any platform share lines linked to them.
+        Renders nothing when they have no stake yet.
+      */}
+      <EarningsPanel />
 
       {/* ------------------------------ KPI row ------------------------------ */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
