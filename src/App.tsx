@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import {
   AdminRoute,
@@ -8,78 +9,82 @@ import {
   EcosystemRoute,
   WorkspaceRoute,
 } from './components/ProtectedRoute';
+import { FullPageLoader } from './components/FullPageLoader';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import VerifyEmail from './pages/VerifyEmail';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Profile from './pages/Profile';
-import Kyc from './pages/Kyc';
-import NotFound from './pages/NotFound';
-import { DashboardLayout } from './components/DashboardLayout';
-import Dashboard from './pages/app/Dashboard';
-import LeadsPage from './pages/app/Leads';
-import OpportunitiesPage from './pages/app/Opportunities';
-import ProjectsPage from './pages/app/Projects';
-import ProjectDetailPage from './pages/app/ProjectDetail';
-import TasksPage from './pages/app/Tasks';
-import TaskDetailPage from './pages/app/TaskDetail';
-import AccountsPage from './pages/app/Accounts';
-import ContactsPage from './pages/app/Contacts';
-import InquiriesPage from './pages/app/Inquiries';
-import BlogPage from './pages/app/Blog';
-import BlogEditorPage from './pages/app/BlogEditor';
-import NewsletterPage from './pages/app/Newsletter';
-import RolesPage from './pages/app/Roles';
-import UsersPage from './pages/app/Users';
-import KycReviewPage from './pages/app/KycReview';
-import InvestmentsPage from './pages/app/Investments';
-import CommitmentsPage from './pages/app/Commitments';
-import GithubReposPage from './pages/app/GithubRepos';
+const Register = lazy(() => import('./pages/Register'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Kyc = lazy(() => import('./pages/Kyc'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const DashboardLayout = lazy(() =>
+  import('./components/DashboardLayout').then((m) => ({ default: m.DashboardLayout })),
+);
+const Dashboard = lazy(() => import('./pages/app/Dashboard'));
+const LeadsPage = lazy(() => import('./pages/app/Leads'));
+const OpportunitiesPage = lazy(() => import('./pages/app/Opportunities'));
+const ProjectsPage = lazy(() => import('./pages/app/Projects'));
+const ProjectDetailPage = lazy(() => import('./pages/app/ProjectDetail'));
+const TasksPage = lazy(() => import('./pages/app/Tasks'));
+const TaskDetailPage = lazy(() => import('./pages/app/TaskDetail'));
+const AccountsPage = lazy(() => import('./pages/app/Accounts'));
+const ContactsPage = lazy(() => import('./pages/app/Contacts'));
+const InquiriesPage = lazy(() => import('./pages/app/Inquiries'));
+const BlogPage = lazy(() => import('./pages/app/Blog'));
+const BlogEditorPage = lazy(() => import('./pages/app/BlogEditor'));
+const NewsletterPage = lazy(() => import('./pages/app/Newsletter'));
+const RolesPage = lazy(() => import('./pages/app/Roles'));
+const UsersPage = lazy(() => import('./pages/app/Users'));
+const KycReviewPage = lazy(() => import('./pages/app/KycReview'));
+const InvestmentsPage = lazy(() => import('./pages/app/Investments'));
+const CommitmentsPage = lazy(() => import('./pages/app/Commitments'));
+const GithubReposPage = lazy(() => import('./pages/app/GithubRepos'));
 
 /* ------------------------- investor workspace ------------------------- */
 // The read-only stakeholder's own dashboard: their position, the company's
 // performance, and the paperwork behind both.
-import InvestorOverviewPage from './pages/app/investor/Overview';
-import InvestorRecordsPage from './pages/app/InvestorDashboard';
-import InvestorTimelinePage from './pages/app/investor/Timeline';
-import InvestorValuationPage from './pages/app/investor/Valuation';
-import InvestorRevenuePage from './pages/app/investor/Revenue';
-import InvestorExpensesPage from './pages/app/investor/Expenses';
-import InvestorProfitPage from './pages/app/investor/Profit';
-import InvestorReportsPage from './pages/app/investor/Reports';
-import InvestorRoiPage from './pages/app/investor/Roi';
-import InvestorEquityPage from './pages/app/investor/EquityProgress';
-import InvestorShareValuePage from './pages/app/investor/ShareValue';
-import InvestorPaymentsPage from './pages/app/investor/PaymentHistory';
-import InvestorDocumentsPage from './pages/app/investor/Documents';
-import InvestorNotificationsPage from './pages/app/investor/Notifications';
-import InvestorSettingsPage from './pages/app/investor/Settings';
+const InvestorOverviewPage = lazy(() => import('./pages/app/investor/Overview'));
+const InvestorRecordsPage = lazy(() => import('./pages/app/InvestorDashboard'));
+const InvestorTimelinePage = lazy(() => import('./pages/app/investor/Timeline'));
+const InvestorValuationPage = lazy(() => import('./pages/app/investor/Valuation'));
+const InvestorRevenuePage = lazy(() => import('./pages/app/investor/Revenue'));
+const InvestorExpensesPage = lazy(() => import('./pages/app/investor/Expenses'));
+const InvestorProfitPage = lazy(() => import('./pages/app/investor/Profit'));
+const InvestorReportsPage = lazy(() => import('./pages/app/investor/Reports'));
+const InvestorRoiPage = lazy(() => import('./pages/app/investor/Roi'));
+const InvestorEquityPage = lazy(() => import('./pages/app/investor/EquityProgress'));
+const InvestorShareValuePage = lazy(() => import('./pages/app/investor/ShareValue'));
+const InvestorPaymentsPage = lazy(() => import('./pages/app/investor/PaymentHistory'));
+const InvestorDocumentsPage = lazy(() => import('./pages/app/investor/Documents'));
+const InvestorNotificationsPage = lazy(() => import('./pages/app/investor/Notifications'));
+const InvestorSettingsPage = lazy(() => import('./pages/app/investor/Settings'));
 
 /* --------------------------- finance admin ---------------------------- */
 // Where the numbers the investor sees are actually recorded.
-import RevenueAdminPage from './pages/app/finance/RevenueAdmin';
-import ExpensesAdminPage from './pages/app/finance/ExpensesAdmin';
-import ValuationAdminPage from './pages/app/finance/ValuationAdmin';
-import DistributionsPage from './pages/app/finance/Distributions';
-import DocumentsAdminPage from './pages/app/finance/DocumentsAdmin';
-import AuditLogPage from './pages/app/finance/AuditLog';
-import InvoicesPage from './pages/app/finance/Invoices';
-import MarketerPaymentsAdminPage from './pages/app/finance/MarketerPayments';
-import EcosystemPage from './pages/app/ecosystem/Ecosystem';
-import MarketerOverviewPage from './pages/app/marketer/Overview';
-import MarketerTasksPage from './pages/app/marketer/Tasks';
-import MarketerDocumentsPage from './pages/app/marketer/Documents';
-import MarketerPaymentsPage from './pages/app/marketer/Payments';
-import MarketerTicketsPage from './pages/app/marketer/Tickets';
-import ClientOverviewPage from './pages/app/client/Overview';
-import ClientProjectsPage from './pages/app/client/Projects';
-import ClientDocumentsPage from './pages/app/client/Documents';
-import ClientSettingsPage from './pages/app/client/Settings';
-import ClientsAdminPage from './pages/app/finance/Clients';
+const RevenueAdminPage = lazy(() => import('./pages/app/finance/RevenueAdmin'));
+const ExpensesAdminPage = lazy(() => import('./pages/app/finance/ExpensesAdmin'));
+const ValuationAdminPage = lazy(() => import('./pages/app/finance/ValuationAdmin'));
+const DistributionsPage = lazy(() => import('./pages/app/finance/Distributions'));
+const DocumentsAdminPage = lazy(() => import('./pages/app/finance/DocumentsAdmin'));
+const AuditLogPage = lazy(() => import('./pages/app/finance/AuditLog'));
+const InvoicesPage = lazy(() => import('./pages/app/finance/Invoices'));
+const MarketerPaymentsAdminPage = lazy(() => import('./pages/app/finance/MarketerPayments'));
+const EcosystemPage = lazy(() => import('./pages/app/ecosystem/Ecosystem'));
+const MarketerOverviewPage = lazy(() => import('./pages/app/marketer/Overview'));
+const MarketerTasksPage = lazy(() => import('./pages/app/marketer/Tasks'));
+const MarketerDocumentsPage = lazy(() => import('./pages/app/marketer/Documents'));
+const MarketerPaymentsPage = lazy(() => import('./pages/app/marketer/Payments'));
+const MarketerTicketsPage = lazy(() => import('./pages/app/marketer/Tickets'));
+const ClientOverviewPage = lazy(() => import('./pages/app/client/Overview'));
+const ClientProjectsPage = lazy(() => import('./pages/app/client/Projects'));
+const ClientDocumentsPage = lazy(() => import('./pages/app/client/Documents'));
+const ClientSettingsPage = lazy(() => import('./pages/app/client/Settings'));
+const ClientsAdminPage = lazy(() => import('./pages/app/finance/Clients'));
 
 export default function App() {
   return (
+    <Suspense fallback={<FullPageLoader />}>
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
 
@@ -269,5 +274,6 @@ export default function App() {
 
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
   );
 }

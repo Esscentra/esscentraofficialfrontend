@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { SESSION_EXPIRED_EVENT } from '@/lib/api';
 import { login as loginApi, logout as logoutApi } from '@/lib/authApi';
 import { getProfile } from '@/lib/userApi';
 import type { User } from '@/types';
@@ -61,6 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
+  }, []);
+
+  // The session died mid-use: send the user to sign in, rather than leaving
+  // them on a page where every request now fails.
+  useEffect(() => {
+    const onExpired = () => {
+      setSessionHint(false);
+      setUserState(null);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {

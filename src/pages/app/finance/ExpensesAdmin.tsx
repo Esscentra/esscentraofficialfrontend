@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CheckCircle2, Clock, Plus, Trash2, Wallet, XCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { CheckCircle2, Clock, HandCoins, Plus, Trash2, Wallet, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -10,7 +10,6 @@ import {
   ExportButtons,
   Pill,
   RangeFilter,
-  Section,
   SelectControl,
   statusTone,
   type DateRange,
@@ -44,16 +43,44 @@ import { formatDate, humanize, inr } from '@/lib/format';
 
 /**
  * ============================================================================
- *  ADMIN — BUSINESS EXPENSES
+ *  ADMIN — EXPENSES
  * ============================================================================
  *
- * The cost side of the P&L, with an explicit approval step.
+ * Every rupee the company has spent, in one table: business expenses, vendor
+ * bills, contractor payments and spend from investors' funds. Fund spend is
+ * capital deployment, so it is listed here but never reduces net profit.
  *
  * The approve/reject buttons are separate endpoints rather than a status
  * dropdown, so the audit trail records who approved a cost and when — the
  * control that stops an expense from quietly reducing what investors are owed.
  * ============================================================================
  */
+
+type ExpenseSource = 'BUSINESS' | 'VENDOR_BILLS' | 'CONTRACTOR_PAYMENTS' | 'FUND';
+
+const SOURCES: Record<ExpenseSource, { label: string; tone: 'blue' | 'violet' | 'teal' | 'amber' }> = {
+  BUSINESS: { label: 'Business', tone: 'blue' },
+  VENDOR_BILLS: { label: 'Vendor bill', tone: 'violet' },
+  CONTRACTOR_PAYMENTS: { label: 'Contractor', tone: 'teal' },
+  FUND: { label: 'Investor fund', tone: 'amber' },
+};
+
+/** One line of the combined table, whichever record it came from. */
+interface ExpenseRow {
+  key: string;
+  source: ExpenseSource;
+  date?: string;
+  category: string;
+  description: string;
+  detail?: string;
+  amount: number;
+  by?: string;
+  status: string;
+  /** Set on business expenses, the only rows managed from this page. */
+  business?: ExpenseRecord;
+  /** Set on fund spend, whose proof files can be downloaded here. */
+  fund?: FundExpenseRow;
+}
 
 const EMPTY_FORM = {
   category: 'MARKETING' as ExpenseCategory,
@@ -90,12 +117,72 @@ export default function ExpensesAdmin() {
     [range.from, range.to, status, category],
   );
 
-  // "Money spent from this fund" records (Commitments page) — shown below the
-  // business expenses for reference. They never reduce net profit.
+  // "Money spent from this fund" records (Commitments page). Listed with the
+  // rest, but they never reduce net profit.
   const fund = useInvestorData<FundExpenseLedger>(
     () => getFundExpenseLedger(range),
     [range.from, range.to],
   );
+
+  // Only business expenses have a category from the filter's list or a workflow
+  // status. The other three kinds are always settled, so a category filter, or
+  // any status filter but Paid, leaves just business expenses.
+  const showSettled = !category && (!status || status === 'PAID');
+
+  const rows = useMemo<ExpenseRow[]>(() => {
+    const combined: ExpenseRow[] = (data?.rows ?? []).map((row) => ({
+      key: `business-${row._id}`,
+      source: 'BUSINESS',
+      date: row.spentAt,
+      category: row.category,
+      description: row.description,
+      detail: row.vendor,
+      amount: row.amount,
+      by: row.approvedBy
+        ? [row.approvedBy.firstName, row.approvedBy.lastName].filter(Boolean).join(' ')
+        : undefined,
+      status: row.status,
+      business: row,
+    }));
+
+    if (showSettled) {
+      for (const row of data?.settledElsewhere ?? []) {
+        combined.push({
+          key: `settled-${row._id}`,
+          source: row.category,
+          date: row.spentAt,
+          category: row.category,
+          description: row.description,
+          detail: row.vendor,
+          amount: row.amount,
+          status: 'PAID',
+        });
+      }
+      for (const row of fund.data?.rows ?? []) {
+        combined.push({
+          key: `fund-${row.id}`,
+          source: 'FUND',
+          date: row.spentAt,
+          category: row.category,
+          description: row.description,
+          detail: row.investorName ? `From ${row.investorName}'s funds` : undefined,
+          amount: row.amount,
+          by: row.recordedByName ?? undefined,
+          status: 'PAID',
+          fund: row,
+        });
+      }
+    }
+
+    return combined.sort(
+      (a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime(),
+    );
+  }, [data, fund.data, showSettled]);
+
+  // Claims still pending, and rejected ones, are listed but are not money spent.
+  const spentRows = rows.filter((row) => row.status === 'APPROVED' || row.status === 'PAID');
+  const totalSpent =
+    Math.round(spentRows.reduce((sum, row) => sum + row.amount, 0) * 100) / 100;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -188,8 +275,8 @@ export default function ExpensesAdmin() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Finance"
-        title="Business expenses"
-        subtitle="Operating costs. Only approved expenses reduce net profit."
+        title="Expenses"
+        subtitle="Everything the company has spent. Investor fund spend is listed here but does not reduce net profit."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <ExportButtons
@@ -232,30 +319,45 @@ export default function ExpensesAdmin() {
         }
       />
 
-      {loading ? (
+      {loading || fund.loading ? (
         <>
           <CardGridSkeleton />
           <TableSkeleton />
         </>
-      ) : error || !data ? (
-        <ErrorState message={error ?? 'No data was returned.'} onRetry={reload} />
+      ) : error || fund.error || !data ? (
+        <ErrorState
+          message={error ?? fund.error ?? 'No data was returned.'}
+          onRetry={() => {
+            reload();
+            fund.reload();
+          }}
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <FinanceCard
               icon={Wallet}
-              label="Counted in profit"
-              value={data.totals.totalExpenses}
+              label="Total spent"
+              value={totalSpent}
               format={inr}
-              hint={`${data.totals.recognisedCount} approved`}
+              hint={`${spentRows.length} ${spentRows.length === 1 ? 'expense' : 'expenses'}`}
               tone="rose"
             />
             <FinanceCard
               icon={CheckCircle2}
-              label="Paid"
-              value={data.totals.paidAmount}
+              label="Counted in profit"
+              value={data.totals.totalExpenses}
               format={inr}
+              hint="Operating costs"
               tone="green"
+            />
+            <FinanceCard
+              icon={HandCoins}
+              label="Investor fund spend"
+              value={showSettled ? (fund.data?.totals.total ?? 0) : 0}
+              format={inr}
+              hint="Does not reduce profit"
+              tone="sky"
             />
             <FinanceCard
               icon={Clock}
@@ -265,45 +367,69 @@ export default function ExpensesAdmin() {
               hint={`${data.totals.pendingCount} to review`}
               tone="amber"
             />
-            <FinanceCard
-              icon={XCircle}
-              label="Rejected"
-              value={data.totals.rejectedAmount}
-              format={inr}
-              hint="Excluded from profit"
-              tone="sky"
-            />
           </div>
 
-          <FinanceTable<ExpenseRecord>
-            rows={data.rows}
-            rowKey={(row) => row._id}
+          <FinanceTable<ExpenseRow>
+            rows={rows}
+            rowKey={(row) => row.key}
             emptyTitle="No expenses recorded"
-            emptyMessage="Add your first business cost to complete the profit calculation."
-            maxHeight={640}
+            emptyMessage="Nothing matches these filters."
+            maxHeight={720}
             columns={[
               {
                 key: 'date',
                 header: 'Date',
                 render: (row) => (
                   <span className="whitespace-nowrap text-slate-300">
-                    {formatDate(row.spentAt)}
+                    {row.date ? formatDate(row.date) : '—'}
                   </span>
+                ),
+              },
+              {
+                key: 'source',
+                header: 'Type',
+                render: (row) => (
+                  <Pill tone={SOURCES[row.source].tone}>{SOURCES[row.source].label}</Pill>
                 ),
               },
               {
                 key: 'category',
                 header: 'Category',
-                render: (row) => <Pill tone="blue">{humanize(row.category)}</Pill>,
+                hideOnMobile: true,
+                render: (row) => <span className="text-slate-300">{humanize(row.category)}</span>,
               },
               {
                 key: 'description',
                 header: 'Description',
                 render: (row) => (
                   <div className="min-w-0">
-                    <p className="truncate text-slate-200">{row.description}</p>
-                    {row.vendor && (
-                      <p className="truncate text-xs text-slate-500">{row.vendor}</p>
+                    <p className="truncate text-slate-200">{row.description || '—'}</p>
+                    {row.detail && <p className="truncate text-xs text-slate-500">{row.detail}</p>}
+                    {row.fund && row.fund.attachments.length > 0 && (
+                      <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                        {row.fund.attachments.map((file, index) =>
+                          file.available ? (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() =>
+                                void downloadExpenseAttachment(row.fund!.id, index, file.name)
+                              }
+                              className="text-[11px] text-brand-300 underline-offset-2 hover:underline"
+                            >
+                              {file.name}
+                            </button>
+                          ) : (
+                            <span
+                              key={index}
+                              className="text-[11px] text-slate-600 line-through"
+                              title="File no longer stored"
+                            >
+                              {file.name}
+                            </span>
+                          ),
+                        )}
+                      </p>
                     )}
                   </div>
                 ),
@@ -317,16 +443,12 @@ export default function ExpensesAdmin() {
                 ),
               },
               {
-                key: 'approver',
-                header: 'Approved by',
+                key: 'by',
+                header: 'Recorded by',
                 hideOnMobile: true,
                 render: (row) =>
-                  row.approvedBy ? (
-                    <span className="text-slate-400">
-                      {[row.approvedBy.firstName, row.approvedBy.lastName]
-                        .filter(Boolean)
-                        .join(' ')}
-                    </span>
+                  row.by ? (
+                    <span className="text-slate-400">{row.by}</span>
                   ) : (
                     <span className="text-slate-600">—</span>
                   ),
@@ -335,59 +457,64 @@ export default function ExpensesAdmin() {
                 key: 'status',
                 header: 'Status',
                 align: 'center',
-                render: (row) => (
-                  <Pill tone={statusTone(row.status)}>{humanize(row.status)}</Pill>
-                ),
+                render: (row) => <Pill tone={statusTone(row.status)}>{humanize(row.status)}</Pill>,
               },
               {
                 key: 'actions',
                 header: '',
                 align: 'right',
-                render: (row) => (
-                  <div className="flex items-center justify-end gap-1">
-                    {row.status === 'PENDING' && (
-                      <>
-                        <button
-                          type="button"
-                          disabled={acting === row._id}
-                          onClick={() => void approve(row)}
-                          className="rounded-lg p-1.5 text-emerald-400 transition hover:bg-emerald-500/10 disabled:opacity-40"
-                          aria-label="Approve expense"
-                          title="Approve"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={acting === row._id}
-                          onClick={() => void reject(row)}
-                          className="rounded-lg p-1.5 text-amber-400 transition hover:bg-amber-500/10 disabled:opacity-40"
-                          aria-label="Reject expense"
-                          title="Reject"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void remove(row)}
-                      className="rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"
-                      aria-label="Delete expense"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ),
+                render: ({ business }) =>
+                  business ? (
+                    <div className="flex items-center justify-end gap-1">
+                      {business.status === 'PENDING' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={acting === business._id}
+                            onClick={() => void approve(business)}
+                            className="rounded-lg p-1.5 text-emerald-400 transition hover:bg-emerald-500/10 disabled:opacity-40"
+                            aria-label="Approve expense"
+                            title="Approve"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={acting === business._id}
+                            onClick={() => void reject(business)}
+                            className="rounded-lg p-1.5 text-amber-400 transition hover:bg-amber-500/10 disabled:opacity-40"
+                            aria-label="Reject expense"
+                            title="Reject"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void remove(business)}
+                        className="rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"
+                        aria-label="Delete expense"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null,
               },
             ]}
             footer={
               <>
-                <TotalCell numeric={false} colSpan={3}>
-                  Counted in profit
+                <TotalCell numeric={false} colSpan={2}>
+                  Total spent
                 </TotalCell>
-                <TotalCell>{inr(data.totals.totalExpenses)}</TotalCell>
+                <TotalCell numeric={false} hideOnMobile>
+                  <span />
+                </TotalCell>
+                <TotalCell numeric={false}>
+                  <span />
+                </TotalCell>
+                <TotalCell>{inr(totalSpent)}</TotalCell>
                 <TotalCell numeric={false} hideOnMobile>
                   <span />
                 </TotalCell>
@@ -397,115 +524,6 @@ export default function ExpensesAdmin() {
               </>
             }
           />
-
-          {fund.data && fund.data.rows.length > 0 && (
-            <Section
-              title="Investor fund spend"
-              description="Money spent from investors' committed funds — recorded and managed on the Commitments page. Shown here for reference; it is capital deployment, not an operating cost, so it never reduces net profit."
-            >
-              <FinanceTable<FundExpenseRow>
-                rows={fund.data.rows}
-                rowKey={(row) => row.id}
-                emptyTitle="No fund spend recorded"
-                emptyMessage="Expenses recorded against commitments will appear here."
-                maxHeight={520}
-                columns={[
-                  {
-                    key: 'date',
-                    header: 'Date',
-                    render: (row) => (
-                      <span className="whitespace-nowrap text-slate-300">
-                        {row.spentAt ? formatDate(row.spentAt) : '—'}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: 'investor',
-                    header: 'Investor',
-                    render: (row) => (
-                      <div className="min-w-0">
-                        <p className="truncate text-slate-200">
-                          {row.investorName ?? '—'}
-                        </p>
-                        {row.commitmentTitle && (
-                          <p className="truncate text-xs text-slate-500">
-                            {row.commitmentTitle}
-                          </p>
-                        )}
-                      </div>
-                    ),
-                  },
-                  {
-                    key: 'category',
-                    header: 'Category',
-                    render: (row) => <Pill tone="blue">{humanize(row.category)}</Pill>,
-                  },
-                  {
-                    key: 'description',
-                    header: 'Description',
-                    render: (row) => (
-                      <div className="min-w-0">
-                        <p className="truncate text-slate-200">{row.description || '—'}</p>
-                        {row.attachments.length > 0 && (
-                          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                            {row.attachments.map((file, index) =>
-                              file.available ? (
-                                <button
-                                  key={index}
-                                  type="button"
-                                  onClick={() =>
-                                    void downloadExpenseAttachment(row.id, index, file.name)
-                                  }
-                                  className="text-[11px] text-brand-300 underline-offset-2 hover:underline"
-                                >
-                                  {file.name}
-                                </button>
-                              ) : (
-                                <span
-                                  key={index}
-                                  className="text-[11px] text-slate-600 line-through"
-                                  title="File no longer stored"
-                                >
-                                  {file.name}
-                                </span>
-                              ),
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    ),
-                  },
-                  {
-                    key: 'amount',
-                    header: 'Amount',
-                    numeric: true,
-                    render: (row) => (
-                      <span className="font-semibold text-white">{inr(row.amount)}</span>
-                    ),
-                  },
-                  {
-                    key: 'recordedBy',
-                    header: 'Recorded by',
-                    hideOnMobile: true,
-                    render: (row) => (
-                      <span className="text-slate-400">{row.recordedByName ?? '—'}</span>
-                    ),
-                  },
-                ]}
-                footer={
-                  <>
-                    <TotalCell numeric={false} colSpan={4}>
-                      Total spent from funds
-                    </TotalCell>
-                    <TotalCell>{inr(fund.data.totals.total)}</TotalCell>
-                    <TotalCell numeric={false} hideOnMobile>
-                      <span />
-                    </TotalCell>
-                  </>
-                }
-              />
-            </Section>
-          )}
         </>
       )}
 

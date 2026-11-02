@@ -113,7 +113,9 @@ export function FilePreviewModal({
 
             {/* Body */}
             <div className="min-h-0 flex-1 bg-black/30">
-              {kind === 'image' ? (
+              {/* A payment's invoice can be a photo, so the stored URL has the
+                  final say over what the caller expected. */}
+              {kind === 'image' || url?.includes('/image/upload/') ? (
                 <div className="grid h-full w-full place-items-center overflow-auto p-4">
                   <img src={url} alt={title} className="max-h-full max-w-full object-contain" />
                 </div>

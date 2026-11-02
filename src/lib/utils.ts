@@ -50,6 +50,12 @@ export function isInvestorRole(role?: string): boolean {
  */
 export const RESTRICTED_ROLE_PATHS: Record<string, string[]> = {
   /**
+   * A self-registered account with no role assigned yet. The server refuses it
+   * everything else (RESTRICTED_ROLE_FEATURES), so no other page would work.
+   */
+  USER: ['/app'],
+
+  /**
    * Contract marketer: their own overview plus the tasks assigned to them.
    *
    * Deliberately NOT `/app/projects` — company projects are internal. The

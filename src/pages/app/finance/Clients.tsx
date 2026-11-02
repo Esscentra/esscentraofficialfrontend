@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import {
   Building2,
   CheckCircle2,
+  ChevronDown,
   FolderKanban,
   Link2,
+  ListChecks,
   Plus,
   Trash2,
   Upload,
@@ -34,10 +36,29 @@ import {
   type ClientDocumentsView,
   type ClientProject,
 } from '@/lib/clientApi';
+import { createProject, type ProjectInput } from '@/lib/projectApi';
+import { createTask, updateTask } from '@/lib/taskApi';
 import { useClientData } from '../client/useClientData';
 import { humanize } from '@/lib/format';
 import { getErrorMessage, isSuperAdminRole, normalizeRoleName } from '@/lib/utils';
-import type { User } from '@/types';
+import type { ProjectStatus, TaskPriority, TaskStatus, User } from '@/types';
+
+const PROJECT_STATUSES: ProjectStatus[] = [
+  'PLANNED',
+  'IN_PROGRESS',
+  'ON_HOLD',
+  'COMPLETED',
+  'CANCELLED',
+];
+const TASK_STATUSES: TaskStatus[] = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+const TASK_PRIORITIES: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+
+const TASK_TONE: Record<TaskStatus, 'gray' | 'blue' | 'green' | 'red'> = {
+  PENDING: 'gray',
+  IN_PROGRESS: 'blue',
+  COMPLETED: 'green',
+  CANCELLED: 'red',
+};
 
 /**
  * ============================================================================
@@ -71,6 +92,9 @@ export default function ClientsAdmin() {
   const [linkOpen, setLinkOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [endTarget, setEndTarget] = useState<ClientProject | null>(null);
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [taskTarget, setTaskTarget] = useState<ClientProject | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
 
   const accounts = useClientData<ClientAccountRow[]>(() => listClientAccounts(), []);
@@ -116,6 +140,19 @@ export default function ClientsAdmin() {
       }),
     [people],
   );
+
+  /** Who a task can be assigned to — our people, never clients or investors. */
+  const staff = useMemo(
+    () =>
+      people.filter((person) => {
+        const role = normalizeRoleName(person.role);
+        return role !== 'CLIENT' && role !== 'INVESTOR';
+      }),
+    [people],
+  );
+
+  const toggleExpanded = (projectId: string) =>
+    setExpanded((prev) => ({ ...prev, [projectId]: !prev[projectId] }));
 
   const reloadAll = () => {
     accounts.reload();
@@ -190,6 +227,77 @@ export default function ClientsAdmin() {
       toast.error('Could not end the project', getErrorMessage(thrown));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onCreateProject = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const input: ProjectInput = {
+      name: String(form.get('name') ?? '').trim(),
+      description: String(form.get('description') ?? ''),
+      status: String(form.get('status') ?? 'PLANNED') as ProjectStatus,
+      startDate: String(form.get('startDate') ?? ''),
+      endDate: String(form.get('endDate') ?? ''),
+      budget: Number(form.get('budget') ?? 0) || undefined,
+      // Always the company selected on this page — that is the whole point of
+      // creating it from here rather than from Projects.
+      accountId: selected,
+      projectLeadId: String(form.get('projectLeadId') ?? ''),
+      teamMemberIds: form.getAll('teamMemberIds').map(String),
+    };
+    if (!input.name) return;
+
+    setBusy(true);
+    try {
+      const created = await createProject(input);
+      toast.success('Project created', `${created.name} is now visible in ${account?.name}'s portal.`);
+      setProjectOpen(false);
+      setExpanded((prev) => ({ ...prev, [created.id]: true }));
+      reloadAll();
+    } catch (thrown) {
+      toast.error('Could not create the project', getErrorMessage(thrown));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onCreateTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!taskTarget) return;
+    const form = new FormData(event.currentTarget);
+    const title = String(form.get('title') ?? '').trim();
+    if (!title) return;
+
+    setBusy(true);
+    try {
+      await createTask({
+        title,
+        description: String(form.get('description') ?? ''),
+        status: String(form.get('status') ?? 'PENDING') as TaskStatus,
+        priority: String(form.get('priority') ?? 'MEDIUM') as TaskPriority,
+        dueDate: String(form.get('dueDate') ?? ''),
+        assignedTo: String(form.get('assignedTo') ?? ''),
+        projectId: taskTarget.id,
+      });
+      toast.success('Task added', `The client can see it under ${taskTarget.name}.`);
+      setExpanded((prev) => ({ ...prev, [taskTarget.id]: true }));
+      setTaskTarget(null);
+      projects.reload();
+      accounts.reload();
+    } catch (thrown) {
+      toast.error('Could not add the task', getErrorMessage(thrown));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onTaskStatus = async (taskId: string, status: TaskStatus) => {
+    try {
+      await updateTask(taskId, { status });
+      projects.reload();
+    } catch (thrown) {
+      toast.error('Could not update the task', getErrorMessage(thrown));
     }
   };
 
@@ -432,59 +540,156 @@ export default function ClientsAdmin() {
           {/* ----------------------------- projects ----------------------------- */}
           <Section
             title="Projects"
-            description="What the client sees, and where you close the work out."
+            description="What the client sees. Create the work here, break it into tasks, and close it out when delivered."
           >
+            {isSuperAdmin && (
+              <div className="mb-3 flex justify-end">
+                <Button size="sm" onClick={() => setProjectOpen(true)}>
+                  <Plus className="h-4 w-4" /> New project
+                </Button>
+              </div>
+            )}
+
             {projects.loading ? (
               <CardGridSkeleton count={2} />
             ) : (projects.data ?? []).length === 0 ? (
               <div className="glass-card p-8 text-center text-sm text-slate-400">
-                No projects are linked to this company yet. Set the client
-                company on a project from the Projects page.
+                No projects for this company yet.
+                {isSuperAdmin
+                  ? ' Create one above and it appears in their portal straight away.'
+                  : ' A super admin can create one here.'}
               </div>
             ) : (
               <div className="space-y-3">
-                {(projects.data ?? []).map((project) => (
-                  <div
-                    key={project.id}
-                    className="glass-card flex flex-wrap items-center justify-between gap-4 p-4"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-white">{project.name}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {ddmmyyyy(project.startDate)} →{' '}
-                        {ddmmyyyy(project.expectedEndDate)}
-                        {project.isEnded && ` · delivered ${ddmmyyyy(project.endedAt)}`}
-                        {' · '}
-                        {project.teamSize} on the team
-                        {project.projectLead && ` · led by ${project.projectLead.name}`}
-                      </p>
-                    </div>
+                {(projects.data ?? []).map((project) => {
+                  const isOpen = Boolean(expanded[project.id]);
+                  return (
+                    <div key={project.id} className="glass-card p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-white">{project.name}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {ddmmyyyy(project.startDate)} →{' '}
+                            {ddmmyyyy(project.expectedEndDate)}
+                            {project.isEnded && ` · delivered ${ddmmyyyy(project.endedAt)}`}
+                            {' · '}
+                            {project.teamSize} on the team
+                            {project.projectLead && ` · led by ${project.projectLead.name}`}
+                          </p>
+                        </div>
 
-                    <div className="flex items-center gap-2">
-                      <Pill tone={project.isEnded ? 'green' : 'blue'}>
-                        {humanize(project.status)}
-                      </Pill>
-                      {isSuperAdmin &&
-                        (project.isEnded ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => void onReopen(project)}
+                        <div className="flex items-center gap-2">
+                          <Pill tone={project.isEnded ? 'green' : 'blue'}>
+                            {humanize(project.status)}
+                          </Pill>
+                          {isSuperAdmin &&
+                            (project.isEnded ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => void onReopen(project)}
+                              >
+                                Reopen
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setEndTarget(project)}
+                              >
+                                <CheckCircle2 className="h-4 w-4" /> Mark ended
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* ------------------------------ tasks ------------------------------ */}
+                      <div className="mt-3 border-t border-white/10 pt-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(project.id)}
+                            className="flex items-center gap-2 text-xs font-semibold text-slate-300 transition hover:text-white"
+                            aria-expanded={isOpen}
                           >
-                            Reopen
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => setEndTarget(project)}
-                          >
-                            <CheckCircle2 className="h-4 w-4" /> Mark ended
-                          </Button>
-                        ))}
+                            <ListChecks className="h-4 w-4 text-brand-300" />
+                            {project.taskCompleted} of {project.taskTotal} task
+                            {project.taskTotal === 1 ? '' : 's'} done · {project.percent}%
+                            <ChevronDown
+                              className={`h-4 w-4 transition ${isOpen ? 'rotate-180' : ''}`}
+                            />
+                          </button>
+                          {isSuperAdmin && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setTaskTarget(project)}
+                            >
+                              <Plus className="h-4 w-4" /> Add task
+                            </Button>
+                          )}
+                        </div>
+
+                        {isOpen && (
+                          <ul className="mt-3 space-y-2">
+                            {project.tasks.length === 0 ? (
+                              <li className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-slate-500">
+                                No tasks yet. Add the first one and the client will see
+                                it under this project.
+                              </li>
+                            ) : (
+                              project.tasks.map((task) => (
+                                <li
+                                  key={task.id}
+                                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-slate-100">
+                                      {task.title}
+                                    </p>
+                                    <p className="truncate text-xs text-slate-500">
+                                      {task.assignee ?? 'Unassigned'}
+                                      {' · '}
+                                      {humanize(task.priority)} priority
+                                      {task.dueDate && ` · due ${ddmmyyyy(task.dueDate)}`}
+                                      {task.completedAt &&
+                                        ` · done ${ddmmyyyy(task.completedAt)}`}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {isSuperAdmin ? (
+                                      <select
+                                        value={task.status}
+                                        onChange={(event) =>
+                                          void onTaskStatus(
+                                            task.id,
+                                            event.target.value as TaskStatus,
+                                          )
+                                        }
+                                        aria-label={`Status of ${task.title}`}
+                                        className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-xs font-semibold text-slate-200 outline-none focus:border-brand-400/50"
+                                      >
+                                        {TASK_STATUSES.map((status) => (
+                                          <option key={status} value={status}>
+                                            {humanize(status)}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <Pill tone={TASK_TONE[task.status]}>
+                                        {humanize(task.status)}
+                                      </Pill>
+                                    )}
+                                  </div>
+                                </li>
+                              ))
+                            )}
+                          </ul>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Section>
@@ -623,6 +828,145 @@ export default function ClientsAdmin() {
             </Button>
             <Button type="submit" disabled={busy}>
               {busy ? 'Uploading…' : 'Share document'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={projectOpen}
+        onClose={() => setProjectOpen(false)}
+        title={account ? `New project for ${account.name}` : 'New project'}
+      >
+        <form onSubmit={onCreateProject} className="space-y-4">
+          <Input label="Name" name="name" required placeholder="Website redesign" />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Project lead"
+              name="projectLeadId"
+              options={[
+                { value: '', label: 'Not assigned' },
+                ...staff.map((person) => ({ value: person.id, label: person.name })),
+              ]}
+            />
+            <Select
+              label="Status"
+              name="status"
+              defaultValue="PLANNED"
+              options={PROJECT_STATUSES.map((status) => ({
+                value: status,
+                label: humanize(status),
+              }))}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input label="Start date" name="startDate" type="date" className="!pl-4" />
+            <Input label="Expected end" name="endDate" type="date" className="!pl-4" />
+            <Input label="Budget (INR)" name="budget" type="number" min={0} />
+          </div>
+
+          <Textarea
+            label="Description (shown to the client)"
+            name="description"
+            rows={3}
+          />
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-slate-300">Team members</p>
+            {staff.length === 0 ? (
+              <p className="text-xs text-slate-500">No staff to pick from yet.</p>
+            ) : (
+              <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
+                {staff.map((person) => (
+                  <label
+                    key={person.id}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-slate-200 hover:bg-white/[0.06]"
+                  >
+                    <input
+                      type="checkbox"
+                      name="teamMemberIds"
+                      value={person.id}
+                      className="h-4 w-4 accent-brand-500"
+                    />
+                    <span className="min-w-0 truncate">{person.name}</span>
+                    <span className="ml-auto shrink-0 text-[11px] text-slate-500">
+                      {humanize(person.role ?? '')}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              The portal shows the head-count only; names appear on tasks they are assigned.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setProjectOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? 'Creating…' : 'Create project'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(taskTarget)}
+        onClose={() => setTaskTarget(null)}
+        title={taskTarget ? `Add a task to ${taskTarget.name}` : 'Add a task'}
+      >
+        <form key={taskTarget?.id ?? 'task'} onSubmit={onCreateTask} className="space-y-4">
+          <Input label="Title" name="title" required placeholder="Homepage wireframes" />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Assign to"
+              name="assignedTo"
+              options={[
+                { value: '', label: 'Unassigned' },
+                ...staff.map((person) => ({ value: person.id, label: person.name })),
+              ]}
+            />
+            <Input label="Due date" name="dueDate" type="date" className="!pl-4" />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Priority"
+              name="priority"
+              defaultValue="MEDIUM"
+              options={TASK_PRIORITIES.map((priority) => ({
+                value: priority,
+                label: humanize(priority),
+              }))}
+            />
+            <Select
+              label="Status"
+              name="status"
+              defaultValue="PENDING"
+              options={TASK_STATUSES.map((status) => ({
+                value: status,
+                label: humanize(status),
+              }))}
+            />
+          </div>
+
+          <Textarea
+            label="Description (shown to the client)"
+            name="description"
+            rows={3}
+          />
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setTaskTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? 'Adding…' : 'Add task'}
             </Button>
           </div>
         </form>

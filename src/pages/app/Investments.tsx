@@ -96,7 +96,16 @@ export default function InvestmentsPage() {
     }));
   }, [investors]);
 
-  const totalRecorded = useMemo(() => items.reduce((s, i) => s + i.amount, 0), [items]);
+  // Same rule as the ownership engine and the investor's own pages: only money
+  // paid into a live commitment is capital received.
+  const totalRecorded = useMemo(
+    () => items.reduce((s, i) => (i.countsAsReceived ? s + i.amount : s), 0),
+    [items],
+  );
+  const totalNotCounted = useMemo(
+    () => items.reduce((s, i) => (i.countsAsReceived ? s : s + i.amount), 0),
+    [items],
+  );
 
   const invoiceOptions = useMemo(
     () => [
@@ -184,12 +193,16 @@ export default function InvestmentsPage() {
     {
       key: 'commitment',
       header: 'Commitment',
-      render: (i) =>
-        i.commitment ? (
-          <StatusBadge tone="violet">{i.commitment.title}</StatusBadge>
-        ) : (
-          <span className="text-xs text-slate-600">standalone</span>
-        ),
+      render: (i) => (
+        <span className="inline-flex flex-col items-start gap-1">
+          {i.commitment ? (
+            <StatusBadge tone="violet">{i.commitment.title}</StatusBadge>
+          ) : (
+            <span className="text-xs text-slate-600">standalone</span>
+          )}
+          {!i.countsAsReceived && <StatusBadge tone="amber">not counted</StatusBadge>}
+        </span>
+      ),
     },
     {
       key: 'invoice',
@@ -267,7 +280,7 @@ export default function InvestmentsPage() {
     <div>
       <PageHeader
         title="Investments"
-        subtitle={`Money ACTUALLY RECEIVED from investors (with invoice PDFs). Total received: ${inr.format(totalRecorded)}. ⚠ If an investor only PLEDGED an amount to pay in installments, do NOT record it here — create it in Commitments and add each installment there as the money arrives.`}
+        subtitle={`Money ACTUALLY RECEIVED from investors (with invoice PDFs). Total received: ${inr.format(totalRecorded)}.${totalNotCounted > 0 ? ` ${inr.format(totalNotCounted)} is not counted because it sits outside a live commitment.` : ''} ⚠ If an investor only PLEDGED an amount to pay in installments, do NOT record it here — create it in Commitments and add each installment there as the money arrives.`}
         action={
           <Button onClick={openCreate}>
             <Plus /> Record investment
@@ -342,10 +355,10 @@ export default function InvestmentsPage() {
             download it from their dashboard. Choosing “No linked invoice” removes the link.
           </p>
           <FileField
-            label={editing?.invoiceUrl ? 'Replace invoice PDF (optional)' : 'Invoice PDF (optional)'}
+            label={editing?.invoiceUrl ? 'Replace invoice or receipt (optional)' : 'Invoice or receipt (optional)'}
             name="invoice"
-            accept="application/pdf"
-            hint="PDF only — stored on Cloudinary, visible to this investor"
+            accept="application/pdf,image/jpeg,image/png,image/webp"
+            hint="PDF, JPG, PNG or WEBP — stored on Cloudinary, visible to this investor"
           />
           {editing?.invoiceUrl && (
             <p className="text-xs text-slate-500">

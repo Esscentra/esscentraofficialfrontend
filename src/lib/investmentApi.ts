@@ -28,6 +28,7 @@ interface RawCommitmentRef {
   id?: string;
   title?: string;
   committedAmount?: number;
+  status?: string;
 }
 
 /** Populated generated-invoice link (the Invoices module). */
@@ -91,6 +92,12 @@ export interface Investment {
   investor?: InvestorRef;
   /** Present when this payment is an installment of a commitment. */
   commitment?: { id: string; title: string };
+  /**
+   * True when this is money received into a live commitment, the only kind that
+   * earns ownership. A record outside one (such as a pledge entered by mistake)
+   * is listed, but must never be added to a total of capital received.
+   */
+  countsAsReceived: boolean;
   amount: number;
   currency: string;
   investedAt?: string;
@@ -121,6 +128,7 @@ function mapInvestment(raw: RawInvestment): Investment {
           title: commitmentRef.title ?? 'Commitment',
         }
       : undefined,
+    countsAsReceived: !!commitmentRef && commitmentRef.status !== 'CANCELLED',
     investor: investorRef
       ? {
           id: investorRef.id ?? investorRef._id ?? '',

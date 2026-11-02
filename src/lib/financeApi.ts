@@ -179,6 +179,17 @@ export interface ExpenseListResult {
     currency: string;
   };
   byCategory: Array<{ category: string; label: string; total: number; count: number }>;
+  /** Vendor bills and contractor payments, recorded outside this module. */
+  settledElsewhere?: SettledExpenseRow[];
+}
+
+export interface SettledExpenseRow {
+  _id: string;
+  category: 'VENDOR_BILLS' | 'CONTRACTOR_PAYMENTS';
+  description: string;
+  vendor?: string;
+  amount: number;
+  spentAt: string;
 }
 
 export interface ValuationRecord {

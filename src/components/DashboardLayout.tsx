@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { DashboardSkeleton } from './DashboardSkeleton';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   BadgeCheck,
   BarChart3,
@@ -86,11 +88,13 @@ const NAV = [
   { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, marketerOnly: true },
 
   /* --------------------------- client portal ---------------------------- */
-  // Shown only to the CLIENT role. Alphabetical.
-  { to: '/app/client/documents', label: 'Documents', icon: FolderArchive, clientOnly: true },
+  // Shown only to the CLIENT role. Fixed order: Overview → My projects →
+  // Documents. Settings and Support tickets are pinned to the bottom block,
+  // rendered after Verification and Profile.
   { to: '/app/client/projects', label: 'My projects', icon: FolderKanban, clientOnly: true },
-  { to: '/app/client/settings', label: 'Settings', icon: Settings, clientOnly: true },
-  { to: '/app/tickets', label: 'Support tickets', icon: LifeBuoy, clientOnly: true },
+  { to: '/app/client/documents', label: 'Documents', icon: FolderArchive, clientOnly: true },
+  { to: '/app/client/settings', label: 'Settings', icon: Settings, clientOnly: true, bottom: true },
+  { to: '/app/tickets', label: 'Support tickets', icon: LifeBuoy, clientOnly: true, bottom: true },
 
   /* ---------------------- admin, finance and staff ---------------------- */
   // One alphabetical block: whatever subset a role can see stays A→Z.
@@ -128,6 +132,8 @@ const NAV = [
   investorOnly?: boolean;
   marketerOnly?: boolean;
   clientOnly?: boolean;
+  /** Render below Verification / Profile instead of in the main nav. */
+  bottom?: boolean;
 }>;
 
 const SIDEBAR_KEY = 'esscentra.sidebar.collapsed';
@@ -182,7 +188,9 @@ export function DashboardLayout() {
 
   const navItems = hubMode
     ? [{ to: '/app/ecosystem', label: 'Ecosystem hub', icon: Orbit, end: true }]
-    : filteredNav;
+    : filteredNav.filter((item) => !item.bottom);
+  // Links pinned below Verification / Profile (e.g. client Settings & tickets).
+  const bottomNavItems = hubMode ? [] : filteredNav.filter((item) => item.bottom);
 
   const onLogout = async () => {
     await logout();
@@ -273,6 +281,19 @@ export function DashboardLayout() {
             <UserCircle className="h-[18px] w-[18px] shrink-0" />
             <span className={labelClass}>Profile</span>
           </NavLink>
+          {bottomNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={() => setOpen(false)}
+              title={collapsed ? item.label : undefined}
+              className={({ isActive }) => linkClass(isActive)}
+            >
+              <item.icon className="h-[18px] w-[18px] shrink-0" />
+              <span className={labelClass}>{item.label}</span>
+            </NavLink>
+          ))}
         </div>
       </aside>
 
@@ -375,7 +396,13 @@ export function DashboardLayout() {
         </header>
 
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-          <Outlet />
+          {/* Inside the shell, so opening a page keeps the sidebar on screen.
+              The key clears a crashed page once the user navigates away. */}
+          <ErrorBoundary key={location.pathname}>
+            <Suspense fallback={<DashboardSkeleton />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
 

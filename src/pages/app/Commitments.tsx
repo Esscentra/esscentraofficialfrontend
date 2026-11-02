@@ -683,10 +683,10 @@ export default function CommitmentsPage() {
                     options={invoiceOptions}
                   />
                   <FileField
-                    label="Invoice PDF (optional)"
+                    label="Invoice or receipt (optional)"
                     name="invoice"
-                    accept="application/pdf"
-                    hint="PDF only — the investor can view & download it"
+                    accept="application/pdf,image/jpeg,image/png,image/webp"
+                    hint="PDF, JPG, PNG or WEBP — the investor can view & download it"
                   />
                   <div className="flex justify-end">
                     <Button size="sm" type="submit" loading={busy}>

@@ -37,14 +37,24 @@ export function NotificationBell() {
     try {
       setItems(await listNotifications());
     } catch {
-      setItems([]);
+      // Keep what is on screen: one failed poll must not empty the bell.
     }
   }, []);
 
   useEffect(() => {
     void load();
-    const id = window.setInterval(() => void load(), POLL_MS);
-    return () => window.clearInterval(id);
+    // No polling from a hidden tab; catch up as soon as it is looked at again.
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
 
   useEffect(() => {

@@ -3,8 +3,10 @@ import {
   CalendarCheck2,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   CircleDot,
   Flag,
+  ListChecks,
   PauseCircle,
   Sparkles,
   UserRound,
@@ -14,7 +16,11 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { FinanceCard } from '@/components/finance/FinanceCard';
 import { Pill, Section } from '@/components/finance/Controls';
 import { CardGridSkeleton, ErrorState } from '@/components/finance/States';
-import { getClientProjects, type ClientProject } from '@/lib/clientApi';
+import {
+  getClientProjects,
+  type ClientProject,
+  type ClientTask,
+} from '@/lib/clientApi';
 import { useClientData } from './useClientData';
 import { humanize } from '@/lib/format';
 
@@ -349,6 +355,9 @@ function ProjectCard({ project }: { project: ClientProject }) {
         </p>
       )}
 
+      {/* --------------------------------- tasks -------------------------------- */}
+      <TaskList tasks={project.tasks} />
+
       {/* ---------------------------------- lead -------------------------------- */}
       <div className="relative mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
         <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-brand-400/30 to-brand-700/15 text-brand-200 ring-1 ring-brand-400/30">
@@ -376,6 +385,112 @@ function ProjectCard({ project }: { project: ClientProject }) {
 }
 
 /* -------------------------------------------------------------------------- */
+
+const TASK_TONE: Record<ClientTask['status'], 'gray' | 'blue' | 'green' | 'red'> = {
+  PENDING: 'gray',
+  IN_PROGRESS: 'blue',
+  COMPLETED: 'green',
+  CANCELLED: 'red',
+};
+
+const PRIORITY_CLASS: Record<ClientTask['priority'], string> = {
+  LOW: 'text-slate-500',
+  MEDIUM: 'text-slate-400',
+  HIGH: 'text-amber-300',
+  URGENT: 'text-rose-300',
+};
+
+/**
+ * The work items behind the "Work completed" bar, so the client can see what
+ * is being done and who is on it — not just a percentage. Open work first,
+ * finished work below; collapsed by default so a long list does not swamp
+ * the card.
+ */
+function TaskList({ tasks }: { tasks: ClientTask[] }) {
+  const [open, setOpen] = useState(false);
+  if (!tasks?.length) return null;
+
+  const active = tasks.filter(
+    (task) => task.status !== 'COMPLETED' && task.status !== 'CANCELLED',
+  );
+  const finished = tasks.filter(
+    (task) => task.status === 'COMPLETED' || task.status === 'CANCELLED',
+  );
+  const ordered = [...active, ...finished];
+  const now = Date.now();
+
+  return (
+    <div className="relative mt-5 border-t border-white/10 pt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+          <ListChecks className="h-3.5 w-3.5 text-brand-300" />
+          Work items
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] tabular-nums text-slate-300">
+            {active.length} open · {finished.length} done
+          </span>
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 text-slate-500 transition ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <ul className="mt-3 space-y-2">
+          {ordered.map((task) => {
+            const isDone = task.status === 'COMPLETED' || task.status === 'CANCELLED';
+            const overdue =
+              !isDone && task.dueDate && new Date(task.dueDate).getTime() < now;
+            return (
+              <li
+                key={task.id}
+                className={`flex flex-wrap items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3 ${
+                  isDone ? 'opacity-70' : ''
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={`text-sm font-medium text-slate-100 ${
+                      task.status === 'COMPLETED' ? 'line-through decoration-slate-500' : ''
+                    }`}
+                  >
+                    {task.title}
+                  </p>
+                  {task.description && (
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-slate-400">
+                      {task.description}
+                    </p>
+                  )}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500">
+                    <span className="inline-flex items-center gap-1">
+                      <UserRound className="h-3 w-3" />
+                      {task.assignee ?? 'Unassigned'}
+                    </span>
+                    <span className={PRIORITY_CLASS[task.priority]}>
+                      {humanize(task.priority)} priority
+                    </span>
+                    {task.completedAt ? (
+                      <span>done {ddmmyyyy(task.completedAt)}</span>
+                    ) : task.dueDate ? (
+                      <span className={overdue ? 'text-rose-300' : ''}>
+                        due {ddmmyyyy(task.dueDate)}
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+                <Pill tone={TASK_TONE[task.status]}>{humanize(task.status)}</Pill>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const METER_TONE: Record<string, string> = {
   brand: 'from-brand-400 to-brand-600',

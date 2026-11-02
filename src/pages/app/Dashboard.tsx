@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { lazy, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
@@ -30,9 +30,12 @@ import {
   isMarketerRole,
   isSuperAdminRole,
 } from '@/lib/utils';
-import InvestorOverview from './investor/Overview';
-import MarketerOverview from './marketer/Overview';
-import ClientOverview from './client/Overview';
+
+// Each role sees one of these, so nobody downloads the other two (or their
+// chart code) just by opening the app.
+const InvestorOverview = lazy(() => import('./investor/Overview'));
+const MarketerOverview = lazy(() => import('./marketer/Overview'));
+const ClientOverview = lazy(() => import('./client/Overview'));
 
 type Card = {
   to: string;
@@ -102,6 +105,21 @@ export default function Dashboard() {
   }
   if (isMarketerRole(user?.role)) {
     return <MarketerOverview />;
+  }
+
+  if (cards.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title={`Welcome, ${firstName}`}
+          subtitle="Your account is active, but no workspace has been assigned to it yet."
+        />
+        <p className="glass-card p-5 text-sm text-slate-400">
+          An administrator needs to give your account a role before you can use the
+          workspace. Your profile and KYC stay available in the meantime.
+        </p>
+      </div>
+    );
   }
 
   return (

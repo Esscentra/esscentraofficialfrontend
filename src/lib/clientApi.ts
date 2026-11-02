@@ -39,6 +39,18 @@ export const PROJECT_STATUSES = [
 ] as const;
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
+/** A work item as the client is allowed to see it — no contract or payment detail. */
+export interface ClientTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  dueDate: string | null;
+  completedAt: string | null;
+  assignee: string | null;
+}
+
 export interface ClientProject {
   id: string;
   name: string;
@@ -69,6 +81,7 @@ export interface ClientProject {
   taskTotal: number;
   taskCompleted: number;
   percent: number;
+  tasks: ClientTask[];
 }
 
 export interface ClientDocumentRow {

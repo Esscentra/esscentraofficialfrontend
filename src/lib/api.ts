@@ -28,7 +28,17 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json", Accept: "application/json" },
   withCredentials: true, // send/receive httpOnly auth cookies
-  timeout: 20_000,
+  timeout: 30_000,
+});
+
+/** Fired when the session can no longer be renewed; AuthContext signs out. */
+export const SESSION_EXPIRED_EVENT = 'esscentra:session-expired';
+
+// An upload is relayed through the API to file storage, which on a slow
+// connection takes far longer than an ordinary request.
+api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) config.timeout = 120_000;
+  return config;
 });
 
 /** Shape of the backend's error envelope (best-effort parsing). */
@@ -107,8 +117,12 @@ api.interceptors.response.use(
       try {
         await refreshSession();
         return api(original);
-      } catch {
-        // Refresh failed → fall through and surface the original 401.
+      } catch (refreshError) {
+        // Refresh failed → fall through and surface the original 401. A server
+        // refusal means the session is over; a network blip (status 0) does not.
+        if (refreshError instanceof ApiError && refreshError.status > 0) {
+          window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+        }
       }
     }
 

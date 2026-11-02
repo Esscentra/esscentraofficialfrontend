@@ -107,11 +107,12 @@ export function InvestorRecordsModal({
   // Standalone investments (installments already show under their commitment).
   const standalone = investments.filter((i) => !i.commitment);
 
-  const totalCommitted = commitments.reduce((s, c) => s + c.committedAmount, 0);
-  const totalReceived =
-    commitments.reduce((s, c) => s + c.receivedTotal, 0) +
-    standalone.reduce((s, i) => s + i.amount, 0);
-  const totalSpent = commitments.reduce((s, c) => s + c.spentTotal, 0);
+  // Capital received means money in a live commitment, as on the investor's own
+  // pages. Standalone rows stay listed below but are not added to these totals.
+  const live = commitments.filter((c) => c.status !== 'CANCELLED');
+  const totalCommitted = live.reduce((s, c) => s + c.committedAmount, 0);
+  const totalReceived = live.reduce((s, c) => s + c.receivedTotal, 0);
+  const totalSpent = live.reduce((s, c) => s + c.spentTotal, 0);
   const balance = totalReceived - totalSpent;
 
   const openPdf = (url?: string, name?: string) =>
@@ -224,7 +225,7 @@ export function InvestorRecordsModal({
                           <div>
                             <h3 className="text-sm font-semibold text-white">Direct investments</h3>
                             <p className="text-[11px] text-slate-500">
-                              Payments not tied to a commitment
+                              Not tied to a commitment, so not counted in the totals above
                             </p>
                           </div>
                         </div>
