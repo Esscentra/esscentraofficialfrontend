@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { ErrorBoundary } from './ErrorBoundary';
+import { EcosystemNav } from './EcosystemNav';
 import {
   BadgeCheck,
   BarChart3,
@@ -187,7 +188,7 @@ export function DashboardLayout() {
   });
 
   const navItems = hubMode
-    ? [{ to: '/app/ecosystem', label: 'Ecosystem hub', icon: Orbit, end: true }]
+    ? []
     : filteredNav.filter((item) => !item.bottom);
   // Links pinned below Verification / Profile (e.g. client Settings & tickets).
   const bottomNavItems = hubMode ? [] : filteredNav.filter((item) => item.bottom);
@@ -247,7 +248,14 @@ export function DashboardLayout() {
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-          {navItems.map((item) => (
+          {hubMode && (
+            <EcosystemNav
+              collapsed={collapsed}
+              linkClass={linkClass}
+              onNavigate={() => setOpen(false)}
+            />
+          )}
+          {!hubMode && navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

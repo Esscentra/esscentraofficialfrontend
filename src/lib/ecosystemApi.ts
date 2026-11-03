@@ -52,6 +52,8 @@ export interface EcosystemPlatformRow {
   /** What this platform sends up to Esscentra. */
   parentAmount: number;
   shareLines: ShareLineAmount[];
+  /** Set when the platform's own API is connected for live data. */
+  live?: { provider: string; lastSyncAt: string | null; needsReconnect: boolean } | null;
 }
 
 export interface EcosystemOverview {
@@ -171,6 +173,18 @@ export interface PlatformDetail {
     parentAmount: number;
   };
   entries: PlatformRevenueEntry[];
+  integration?: PlatformIntegration | null;
+}
+
+/** How a platform's live data is connected. The token itself never leaves the server. */
+export interface PlatformIntegration {
+  provider?: string;
+  baseUrl?: string;
+  accountEmail?: string;
+  accountName?: string | null;
+  connectedAt?: string;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
 }
 
 export interface PlatformInput {
@@ -266,5 +280,305 @@ export async function updateParentShares(parentShares: ShareLine[]) {
   const { data } = await api.patch<ApiEnvelope<unknown>>(`${BASE}/settings`, {
     parentShares,
   });
+  return data.data;
+}
+
+/* ============================================================================
+ *  LIVE PLATFORM DATA — EsscentraPrep, read through the hub's server
+ * ============================================================================
+ * Shapes follow EsscentraPrep's GET API reference. Every field is optional
+ * here on purpose: a panel whose data is missing renders empty, not broken.
+ */
+
+export interface PrepTask {
+  _id: string;
+  date?: string;
+  week?: number;
+  theme?: string;
+  slot?: string;
+  title?: string;
+  category?: string;
+  completed?: boolean;
+  confidence?: number | null;
+  minutesSpent?: number;
+  isRevision?: boolean;
+}
+
+export interface PrepCount {
+  total?: number;
+  done?: number;
+}
+
+export interface PrepLiveData {
+  me?: {
+    user?: {
+      id?: string;
+      name?: string;
+      email?: string;
+      avatar?: string;
+      plan?: string;
+      trialEndsAt?: string;
+      planWeeks?: number;
+      startDate?: string;
+      studyDays?: string[];
+      referralCount?: number;
+      createdAt?: string;
+    };
+  };
+  billing?: {
+    tier?: string;
+    status?: string;
+    active?: boolean;
+    daysLeft?: number | null;
+    trialEndsAt?: string | null;
+    plan?: string | null;
+  };
+  plans?: {
+    plans?: Array<{ _id: string; name?: string; weeks?: number; startDate?: string; targetDate?: string; examGroup?: string }>;
+  };
+  stats?: {
+    today?: string;
+    overall?: PrepCount;
+    byCategory?: Record<string, PrepCount>;
+    byWeek?: Record<string, PrepCount>;
+    last14?: Array<PrepCount & { date: string }>;
+    streak?: number;
+    focus?: { totalMinutes?: number; last7Minutes?: number };
+    weekThemes?: Array<{ week: number; theme?: string; category?: string }>;
+    planStart?: string;
+    planEnd?: string;
+  };
+  readiness?: {
+    overall?: number;
+    status?: string;
+    categories?: Array<{
+      category: string;
+      score?: number;
+      status?: string;
+      coverage?: number;
+      mastery?: number;
+      quizAccuracy?: number | null;
+      done?: number;
+      total?: number;
+      lastPractised?: string | null;
+    }>;
+    weakest?: unknown[];
+    weakTopics?: unknown[];
+    pendingRevisions?: number;
+    quizzesTaken?: number;
+    interviewsTaken?: number;
+  };
+  pace?: {
+    status?: string;
+    total?: number;
+    done?: number;
+    remaining?: number;
+    pace?: number;
+    projectedFinish?: string | null;
+    deadline?: string | null;
+    daysToDeadline?: number | null;
+    studyDaysLeft?: number | null;
+    neededPerDay?: number | null;
+    slipDays?: number | null;
+    projectedCoverage?: number | null;
+  };
+  weeklyReport?: {
+    report?: {
+      weekStart?: string;
+      weekEnd?: string;
+      scheduledThisWeek?: number;
+      doneThisWeek?: number;
+      completionPct?: number;
+      focusMinutes?: number;
+      flashcardsDue?: number;
+      followUps?: number;
+      hasActivity?: boolean;
+    };
+  };
+  today?: { tasks?: PrepTask[] };
+  overdue?: { tasks?: PrepTask[]; today?: string };
+  calendar?: { month?: string; days?: Record<string, PrepCount> };
+  flashcardStats?: { total?: number; due?: number; byBox?: number[] };
+  quizzes?: {
+    quizzes?: Array<{
+      _id: string;
+      category?: string;
+      mode?: string;
+      title?: string;
+      status?: string;
+      score?: number | null;
+      correct?: number;
+      total?: number;
+      createdAt?: string;
+      submittedAt?: string | null;
+    }>;
+  };
+  interviews?: {
+    interviews?: Array<{
+      _id: string;
+      kind?: string;
+      role?: string;
+      level?: string;
+      status?: string;
+      overallScore?: number | null;
+      totalQuestions?: number;
+      answered?: number;
+      createdAt?: string;
+    }>;
+  };
+  testsOverview?: {
+    examGroup?: string;
+    allowance?: { tier?: string; limit?: number; used?: number; remaining?: number; resetsOn?: string };
+    series?: { items?: unknown[]; next?: { title?: string; date?: string } | null; deadline?: string | null };
+  };
+  applications?: {
+    applications?: Array<{
+      _id: string;
+      company?: string;
+      role?: string;
+      stage?: string;
+      location?: string;
+      appliedOn?: string;
+      nextStep?: string;
+      followUpOn?: string;
+    }>;
+    counts?: Record<string, number>;
+    followUpsDue?: number;
+    stages?: string[];
+  };
+  referral?: { code?: string; link?: string; count?: number; bonusDaysEarned?: number };
+  buddies?: {
+    buddies?: Array<{ id: string; name?: string; avatar?: string; isYou?: boolean; streak?: number; doneThisWeek?: number }>;
+  };
+}
+
+export interface PrepLiveOverview {
+  data: PrepLiveData;
+  /** Panels that could not be loaded, by name, with the reason. */
+  errors: Partial<Record<keyof PrepLiveData, string>>;
+  fetchedAt: string;
+  today: string;
+}
+
+/** Live data can wait on a platform waking from sleep, so these get longer. */
+const LIVE_TIMEOUT = { timeout: 90_000 };
+
+export async function connectPlatformLive(
+  id: string,
+  input: { baseUrl: string; email: string; password: string },
+) {
+  const { data } = await api.post<ApiEnvelope<PlatformDetail>>(
+    `${BASE}/platforms/${id}/live/connect`,
+    input,
+    LIVE_TIMEOUT,
+  );
+  return data.data;
+}
+
+export async function disconnectPlatformLive(id: string) {
+  await api.delete(`${BASE}/platforms/${id}/live`);
+}
+
+export async function getPlatformLiveOverview(id: string, plan?: string) {
+  const { data } = await api.get<ApiEnvelope<PrepLiveOverview>>(
+    `${BASE}/platforms/${id}/live/overview${plan ? `?plan=${encodeURIComponent(plan)}` : ''}`,
+    LIVE_TIMEOUT,
+  );
+  return data.data;
+}
+
+/** One documented read, e.g. tasks for a week or another month's calendar. */
+export async function getPlatformLiveResource<T>(
+  id: string,
+  resource: string,
+  query: Record<string, string | undefined> = {},
+) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, value);
+  const qs = params.toString();
+  const { data } = await api.get<ApiEnvelope<T>>(
+    `${BASE}/platforms/${id}/live/${resource}${qs ? `?${qs}` : ''}`,
+    LIVE_TIMEOUT,
+  );
+  return data.data;
+}
+
+/** Fired after a platform is added, renamed or removed, so the sidebar refreshes. */
+export const ECOSYSTEM_CHANGED_EVENT = 'esscentra:ecosystem-changed';
+
+/* ============================================================================
+ *  BUSINESS SUMMARY — all of a sub-product's users and revenue, no login
+ * ============================================================================ */
+
+export interface ShareSplit {
+  revenue: number;
+  platformLines: Array<{ name: string; percent: number; amount: number }>;
+  toEsscentra: { percent: number; amount: number };
+  parentLines: Array<{ name: string; percent: number; amount: number }>;
+}
+
+export interface BusinessUser {
+  id: string;
+  name: string;
+  email: string;
+  plan: 'free_trial' | 'standard' | 'premium' | 'expired' | 'legacy' | string;
+  trialEndsAt?: string | null;
+  emailVerified?: boolean;
+  joinedAt?: string;
+  referrals?: number;
+  subscription: {
+    tier: string;
+    status: string;
+    cycle: string;
+    testMode: boolean;
+    renewsAt: string | null;
+    amount: number;
+  } | null;
+}
+
+export interface PlatformBusiness {
+  generatedAt: string;
+  users: {
+    total: number;
+    verified: number;
+    byPlan: Record<string, number>;
+    paying: number;
+    legacy: number;
+    signupsThisMonth: number;
+    signupsByMonth: Array<{ month: string; count: number }>;
+  };
+  trials: {
+    active: number;
+    endingIn3Days: number;
+    lapsed: number;
+    conversionPercent: number | null;
+  };
+  subscriptions: {
+    byStatus: Record<string, number>;
+    active: number;
+    activeTestMode: number;
+    activeByTier: Record<string, number>;
+    activeByCycle: Record<string, number>;
+    monthlyRecurringRevenue: number;
+  };
+  revenue: {
+    currency: string;
+    total: number;
+    payments: number;
+    thisMonth: number;
+    byMonth: Array<{ month: string; amount: number; payments: number }>;
+    byPlan: Array<{ tier: string; cycle: string; amount: number; payments: number }>;
+  };
+  /** Individual accounts. Only returned to super admins. */
+  recentUsers?: BusinessUser[];
+  recentUsersLimit?: number;
+  shares: { lifetime: ShareSplit; thisMonth: ShareSplit };
+}
+
+export async function getPlatformBusiness(id: string) {
+  const { data } = await api.get<ApiEnvelope<PlatformBusiness>>(
+    `${BASE}/platforms/${id}/business`,
+    LIVE_TIMEOUT,
+  );
   return data.data;
 }

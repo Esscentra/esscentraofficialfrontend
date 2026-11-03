@@ -6,6 +6,7 @@ import {
   type FormEvent,
 } from 'react';
 import {
+  ArrowRight,
   Boxes,
   Coins,
   ExternalLink,
@@ -16,7 +17,9 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { FinanceCard } from '@/components/finance/FinanceCard';
 import { FinanceTable } from '@/components/finance/FinanceTable';
 import { Pill, Section } from '@/components/finance/Controls';
@@ -41,6 +44,7 @@ import {
   updateParentShares,
   updatePlatform,
   updatePlatformRevenue,
+  ECOSYSTEM_CHANGED_EVENT,
   PLATFORM_STATUSES,
   type EcosystemOverview,
   type EcosystemPlatformRow,
@@ -336,9 +340,11 @@ export default function EcosystemPage() {
     try {
       if (platformModal === 'edit' && selectedId) {
         await updatePlatform(selectedId, input);
+        window.dispatchEvent(new Event(ECOSYSTEM_CHANGED_EVENT));
         toast.success('Platform updated');
       } else {
         const created = await createPlatform(input);
+        window.dispatchEvent(new Event(ECOSYSTEM_CHANGED_EVENT));
         setSelectedId(String(created._id));
         toast.success('Platform added to the ecosystem');
       }
@@ -361,6 +367,7 @@ export default function EcosystemPage() {
       return;
     try {
       await deletePlatform(row.id);
+      window.dispatchEvent(new Event(ECOSYSTEM_CHANGED_EVENT));
       toast.info('Platform deleted', row.name);
       setSelectedId(null);
       loadOverview();
@@ -617,8 +624,14 @@ export default function EcosystemPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="min-w-0 truncate text-sm font-bold text-white">
-                      {p.name}
+                    <p className="flex min-w-0 items-center gap-2 text-sm font-bold text-white">
+                      <PlatformLogo
+                        slug={p.slug}
+                        name={p.name}
+                        className="h-6 w-6 rounded-md"
+                        letterClassName="text-xs"
+                      />
+                      <span className="truncate">{p.name}</span>
                     </p>
                     <Pill tone={STATUS_TONE[p.status]}>{humanize(p.status)}</Pill>
                   </div>
@@ -653,9 +666,12 @@ export default function EcosystemPage() {
             <div className="glass-card p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-brand-400/25 to-brand-700/10 text-brand-300 ring-1 ring-brand-500/30">
-                    <Boxes className="h-5 w-5" />
-                  </span>
+                  <PlatformLogo
+                    slug={selectedRow.slug}
+                    name={selectedRow.name}
+                    className="h-11 w-11 rounded-xl"
+                    letterClassName="text-lg"
+                  />
                   <div>
                     <p className="flex items-center gap-2 text-sm font-bold text-white">
                       {selectedRow.name}
@@ -676,6 +692,12 @@ export default function EcosystemPage() {
                     </p>
                   </div>
                 </div>
+                <Link
+                  to={`/app/ecosystem/${selectedRow.slug}`}
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white shadow transition hover:bg-brand-400"
+                >
+                  Open dashboard <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
                 {canManage && (
                   <div className="flex gap-2">
                     <Button

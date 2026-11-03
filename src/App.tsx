@@ -71,6 +71,7 @@ const AuditLogPage = lazy(() => import('./pages/app/finance/AuditLog'));
 const InvoicesPage = lazy(() => import('./pages/app/finance/Invoices'));
 const MarketerPaymentsAdminPage = lazy(() => import('./pages/app/finance/MarketerPayments'));
 const EcosystemPage = lazy(() => import('./pages/app/ecosystem/Ecosystem'));
+const PlatformDashboardPage = lazy(() => import('./pages/app/ecosystem/PlatformDashboard'));
 const MarketerOverviewPage = lazy(() => import('./pages/app/marketer/Overview'));
 const MarketerTasksPage = lazy(() => import('./pages/app/marketer/Tasks'));
 const MarketerDocumentsPage = lazy(() => import('./pages/app/marketer/Documents'));
@@ -164,6 +165,8 @@ export default function App() {
         {/* Admin governance pages */}
         {/* Holding-company view: super admin manages, investor reads. */}
         <Route path="ecosystem" element={<EcosystemRoute><EcosystemPage /></EcosystemRoute>} />
+        {/* One sub-product: its ledger, agreement and live data. */}
+        <Route path="ecosystem/:slug" element={<EcosystemRoute><PlatformDashboardPage /></EcosystemRoute>} />
 
         <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="kyc-review" element={<AdminRoute><KycReviewPage /></AdminRoute>} />
