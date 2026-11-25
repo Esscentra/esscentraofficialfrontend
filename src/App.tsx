@@ -229,9 +229,10 @@ export default function App() {
         <Route path="marketer/tasks" element={<MarketerTasksPage />} />
         <Route path="marketer/documents" element={<MarketerDocumentsPage />} />
         <Route path="marketer/payments" element={<MarketerPaymentsPage />} />
-        <Route path="marketer/tickets" element={<MarketerTicketsPage />} />
         {/* Shared support desk: contractors, clients and admins all land on
-            the same conversation view rather than three that drift. */}
+            the same conversation view at one URL. The old contractor path
+            redirects so bookmarks and emailed links still work. */}
+        <Route path="marketer/tickets" element={<Navigate to="/app/tickets" replace />} />
         <Route path="tickets" element={<MarketerTicketsPage />} />
 
         {/* Client portal. Read-only and scoped to the caller's company

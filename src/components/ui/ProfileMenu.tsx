@@ -1,20 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, Check, ChevronDown, LogOut, Moon, Sun } from 'lucide-react';
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  LogOut,
+  Moon,
+  Settings,
+  ShieldCheck,
+  Sun,
+  UserCircle,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from './Toast';
 import { useTheme, type Theme } from '@/context/ThemeProvider';
 import { Avatar as UserAvatar } from './Avatar';
-import { cn } from '@/lib/utils';
+import { cn, isClientRole, isInvestorRole } from '@/lib/utils';
 
 const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
-  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'light', label: 'Day', icon: Sun },
   { value: 'dark', label: 'Dark', icon: Moon },
   { value: 'reading', label: 'Reading', icon: BookOpen },
 ];
 
-/** Topbar account control: avatar trigger + dropdown with identity, theme and sign-out. */
+/**
+ * Topbar account control: everything about *you* rather than the business —
+ * profile, identity verification, settings, appearance and sign-out — in one
+ * dropdown, so the sidebar only holds work.
+ */
 export function ProfileMenu() {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -44,9 +58,26 @@ export function ProfileMenu() {
     navigate('/login', { replace: true });
   };
 
-  const Avatar = ({ size = 'h-9 w-9' }: { size?: string }) => (
-    <UserAvatar src={user?.avatarUrl} name={user?.name} className={size} />
-  );
+  /** Clients are known by their company; everyone else by their own name. */
+  const displayName = user?.company?.name || user?.name || '';
+  const secondLine = user?.company ? user.name : user?.email;
+  const avatarSrc = user?.company?.logo ?? user?.avatarUrl;
+
+  // Role-specific preference pages (notification and communication settings).
+  const settingsTo = isInvestorRole(user?.role)
+    ? '/app/investor/settings'
+    : isClientRole(user?.role)
+      ? '/app/client/settings'
+      : null;
+
+  const links = [
+    { to: '/profile', label: 'Profile', icon: UserCircle },
+    { to: '/kyc', label: 'Verification', icon: ShieldCheck },
+    ...(settingsTo ? [{ to: settingsTo, label: 'Settings', icon: Settings }] : []),
+  ];
+
+  const itemClass =
+    'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-slate-300 transition hover:bg-white/[0.06] hover:text-white';
 
   return (
     <div ref={ref} className="relative">
@@ -56,19 +87,19 @@ export function ProfileMenu() {
         aria-expanded={open}
         aria-label="Account menu"
         className={cn(
-          'flex items-center gap-2.5 rounded-xl border py-1.5 pl-2 pr-2.5 transition',
+          'flex items-center gap-2.5 rounded-xl border py-1.5 pl-1.5 pr-2 transition sm:pl-2 sm:pr-2.5',
           open
             ? 'border-white/20 bg-white/[0.08]'
             : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.08]',
         )}
       >
-        <Avatar />
+        <UserAvatar src={avatarSrc} name={displayName} className="h-8 w-8" />
         <div className="hidden text-left sm:block">
           <p className="max-w-[12rem] truncate text-sm font-semibold leading-tight text-white">
-            {user?.name}
+            {displayName}
           </p>
           <p className="max-w-[12rem] truncate text-[11px] leading-tight text-slate-400">
-            {user?.email}
+            {secondLine}
           </p>
         </div>
         <ChevronDown
@@ -88,16 +119,32 @@ export function ProfileMenu() {
           >
             {/* Identity header */}
             <div className="flex items-center gap-3 border-b border-white/10 p-4">
-              <Avatar size="h-11 w-11" />
+              <UserAvatar src={avatarSrc} name={displayName} className="h-11 w-11" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">{user?.name}</p>
-                <p className="truncate text-xs text-slate-400">{user?.email}</p>
+                <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                <p className="truncate text-xs text-slate-400">{secondLine}</p>
                 {user?.role && (
                   <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-brand-500/15 px-2 py-0.5 text-[10px] font-semibold capitalize text-brand-200 ring-1 ring-brand-500/25">
                     {user.role.toLowerCase().replace(/_/g, ' ')}
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* Account pages */}
+            <div className="border-b border-white/10 p-2">
+              {links.map(({ to, label, icon: Icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className={itemClass}
+                >
+                  <Icon className="h-[17px] w-[17px] shrink-0" />
+                  {label}
+                </Link>
+              ))}
             </div>
 
             {/* Appearance */}

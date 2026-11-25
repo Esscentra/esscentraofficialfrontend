@@ -279,8 +279,8 @@ export default function InvestmentsPage() {
   return (
     <div>
       <PageHeader
-        title="Investments"
-        subtitle={`Money ACTUALLY RECEIVED from investors (with invoice PDFs). Total received: ${inr.format(totalRecorded)}.${totalNotCounted > 0 ? ` ${inr.format(totalNotCounted)} is not counted because it sits outside a live commitment.` : ''} ⚠ If an investor only PLEDGED an amount to pay in installments, do NOT record it here — create it in Commitments and add each installment there as the money arrives.`}
+        title="Money received"
+        subtitle={`${inr.format(totalRecorded)} received from investors.${totalNotCounted > 0 ? ` ${inr.format(totalNotCounted)} is outside a live commitment and not counted.` : ''} Pledges paid in instalments belong in Commitments.`}
         action={
           <Button onClick={openCreate}>
             <Plus /> Record investment

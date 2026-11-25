@@ -220,7 +220,7 @@ export default function MarketerOverview() {
             hint: 'Your agreements, ready to download',
           },
           {
-            to: '/app/marketer/tickets',
+            to: '/app/tickets',
             label: 'Raise a ticket',
             icon: LifeBuoy,
             hint: 'Anything blocking you',

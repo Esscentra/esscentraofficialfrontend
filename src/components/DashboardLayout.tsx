@@ -1,168 +1,51 @@
-import { Suspense, useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Building2, ChevronDown, Menu, Orbit, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { ErrorBoundary } from './ErrorBoundary';
 import { EcosystemNav } from './EcosystemNav';
-import {
-  BadgeCheck,
-  BarChart3,
-  Bell,
-  Building,
-  Building2,
-  Calculator,
-  CalendarClock,
-  Coins,
-  FolderArchive,
-  FolderKanban,
-  HandCoins,
-  History,
-  IndianRupee,
-  LayoutDashboard,
-  ListChecks,
-  LogOut,
-  Mail,
-  Menu,
-  MessageSquare,
-  PanelLeftClose,
-  PanelLeftOpen,
-  LifeBuoy,
-  PieChart,
-  Receipt,
-  ScrollText,
-  Settings,
-  ShieldCheck,
-  ShieldHalf,
-  TrendingUp,
-  Trophy,
-  UserCircle,
-  UserCog,
-  Users,
-  Wallet,
-  X,
-  Orbit,
-} from 'lucide-react';
 import { AuroraBackground } from './AuroraBackground';
 import { NotificationBell } from './NotificationBell';
-import { QuickActions } from './QuickActions';
 import { Logo } from './Logo';
-import { ThemeSwitcher } from './ui/ThemeSwitcher';
+import { ProfileMenu } from './ui/ProfileMenu';
+import { SectionTabs } from './SectionTabs';
+import { isItemActive, sectionsFor, tabsFor } from './navigation';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from './ui/Toast';
-import { Avatar } from './ui/Avatar';
-import {
-  canAccessAppPath,
-  cn,
-  isAdminRole,
-  isInvestorRole,
-  isClientRole,
-  isMarketerRole,
-  isSuperAdminRole,
-} from '@/lib/utils';
-
-const NAV = [
-  // Overview stays first; every group below it is sorted A→Z by label so a
-  // link is always where the eye expects it.
-  { to: '/app', label: 'Overview', icon: LayoutDashboard, end: true },
-
-  /* ------------------------- investor workspace ------------------------- */
-  // Shown only to the INVESTOR role. Alphabetical by label.
-  { to: '/app/investor/documents', label: 'Documents', icon: FolderArchive, investorOnly: true },
-  { to: '/app/investor/equity', label: 'Equity progress', icon: PieChart, investorOnly: true },
-  { to: '/app/investor/expenses', label: 'Expenses', icon: Wallet, investorOnly: true },
-  { to: '/app/investor/records', label: 'Fund usage', icon: Receipt, investorOnly: true },
-  { to: '/app/investor/timeline', label: 'My investments', icon: CalendarClock, investorOnly: true },
-  { to: '/app/investor/notifications', label: 'Notifications', icon: Bell, investorOnly: true },
-  { to: '/app/investor/payments', label: 'Payments', icon: Coins, investorOnly: true },
-  { to: '/app/investor/profit', label: 'Profit', icon: TrendingUp, investorOnly: true },
-  { to: '/app/investor/reports', label: 'Reports', icon: BarChart3, investorOnly: true },
-  { to: '/app/investor/revenue', label: 'Revenue', icon: IndianRupee, investorOnly: true },
-  { to: '/app/investor/roi', label: 'ROI', icon: Calculator, investorOnly: true },
-  { to: '/app/investor/settings', label: 'Settings', icon: Settings, investorOnly: true },
-  { to: '/app/investor/share-value', label: 'Share value', icon: Trophy, investorOnly: true },
-  { to: '/app/investor/valuation', label: 'Valuation', icon: Building2, investorOnly: true },
-
-  /* ------------------------ contractor workspace ------------------------ */
-  // Shown only to the FREELANCE_PERFORMANCE_MARKETER role. Alphabetical.
-  { to: '/app/marketer/documents', label: 'Documents', icon: FolderArchive, marketerOnly: true },
-  { to: '/app/marketer/tasks', label: 'My tasks', icon: ListChecks, marketerOnly: true },
-  { to: '/app/marketer/payments', label: 'Payments', icon: Coins, marketerOnly: true },
-  { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, marketerOnly: true },
-
-  /* --------------------------- client portal ---------------------------- */
-  // Shown only to the CLIENT role. Fixed order: Overview → My projects →
-  // Documents. Settings and Support tickets are pinned to the bottom block,
-  // rendered after Verification and Profile.
-  { to: '/app/client/projects', label: 'My projects', icon: FolderKanban, clientOnly: true },
-  { to: '/app/client/documents', label: 'Documents', icon: FolderArchive, clientOnly: true },
-  { to: '/app/client/settings', label: 'Settings', icon: Settings, clientOnly: true, bottom: true },
-  { to: '/app/tickets', label: 'Support tickets', icon: LifeBuoy, clientOnly: true, bottom: true },
-
-  /* ---------------------- admin, finance and staff ---------------------- */
-  // One alphabetical block: whatever subset a role can see stays A→Z.
-  { to: '/app/accounts', label: 'Accounts', icon: Building, staffOnly: true },
-  { to: '/app/finance/audit', label: 'Audit trail', icon: History, adminOnly: true },
-  { to: '/app/finance/clients', label: 'Clients', icon: Building, superAdminOnly: true },
-  { to: '/app/commitments', label: 'Commitments', icon: HandCoins, adminOnly: true },
-  { to: '/app/contacts', label: 'Contacts', icon: Building2, staffOnly: true },
-  { to: '/app/finance/contractor-payments', label: 'Contractor pay', icon: HandCoins, adminOnly: true },
-  { to: '/app/finance/distributions', label: 'Distributions', icon: Coins, adminOnly: true },
-  { to: '/app/finance/expenses', label: 'Expenses', icon: Wallet, adminOnly: true },
-  // Blogs, GitHub and My documents moved to the floating quick-actions menu
-  // at the bottom-right of the workspace (see QuickActions.tsx).
-  { to: '/app/inquiries', label: 'Inquiries', icon: MessageSquare, staffOnly: true },
-  { to: '/app/investments', label: 'Investments', icon: Receipt, adminOnly: true },
-  { to: '/app/kyc-review', label: 'KYC Review', icon: BadgeCheck, adminOnly: true },
-  { to: '/app/leads', label: 'Leads', icon: Users, staffOnly: true },
-  // Admin-only: subscriber addresses are PII and the send history names them.
-  { to: '/app/newsletter', label: 'Newsletter', icon: Mail, adminOnly: true },
-  { to: '/app/projects', label: 'Projects', icon: FolderKanban, staffOnly: true },
-  { to: '/app/finance/revenue', label: 'Revenue', icon: IndianRupee, adminOnly: true },
-  { to: '/app/roles', label: 'Roles', icon: ShieldHalf, superAdminOnly: true },
-  { to: '/app/marketer/tickets', label: 'Support tickets', icon: LifeBuoy, adminOnly: true },
-  { to: '/app/tasks', label: 'Tasks', icon: ListChecks, staffOnly: true },
-  { to: '/app/users', label: 'Users', icon: UserCog, adminOnly: true },
-  { to: '/app/finance/valuation', label: 'Valuation', icon: Building2, adminOnly: true },
-] as Array<{
-  to: string;
-  label: string;
-  icon: typeof Users;
-  end?: boolean;
-  adminOnly?: boolean;
-  superAdminOnly?: boolean;
-  staffOnly?: boolean;
-  investorOnly?: boolean;
-  marketerOnly?: boolean;
-  clientOnly?: boolean;
-  /** Render below Verification / Profile instead of in the main nav. */
-  bottom?: boolean;
-}>;
+import { cn, isInvestorRole, isSuperAdminRole } from '@/lib/utils';
 
 const SIDEBAR_KEY = 'esscentra.sidebar.collapsed';
+const SECTIONS_KEY = 'esscentra.sidebar.closedSections';
+
+function readClosedSections(): string[] {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(SECTIONS_KEY) ?? '[]');
+    return Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 export function DashboardLayout() {
-  const { user, logout } = useAuth();
-  const toast = useToast();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false); // mobile drawer
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(SIDEBAR_KEY) === '1',
   );
+  // Sidebar sections the user folded away, remembered between visits.
+  const [closedSections, setClosedSections] = useState<string[]>(readClosedSections);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
   }, [collapsed]);
+  useEffect(() => {
+    localStorage.setItem(SECTIONS_KEY, JSON.stringify(closedSections));
+  }, [closedSections]);
 
-  // Gate links by tier: Users/KYC Review = admin+, Roles = super admin only.
-  // Investors (read-only stakeholders) only get the KPI overview.
-  const isAdmin = isAdminRole(user?.role);
   const isSuperAdmin = isSuperAdminRole(user?.role);
-  const isMarketer = isMarketerRole(user?.role);
-  const isClient = isClientRole(user?.role);
-
-  /** Clients are known by their company; everyone else by their own name. */
-  const displayName = user?.company?.name || user?.name || '';
   const isInvestor = isInvestorRole(user?.role);
+
   // ------------------------------------------------------------------
   // Ecosystem hub mode — the Instagram-style account switch. Inside
   // /app/ecosystem the parent platform's nav disappears entirely; the
@@ -172,37 +55,18 @@ export function DashboardLayout() {
   // ------------------------------------------------------------------
   const hubMode = pathname.startsWith('/app/ecosystem');
 
-  const filteredNav = NAV.filter((item) => {
-    // Narrow-surface roles (see RESTRICTED_ROLE_PATHS) get only the pages
-    // listed for them. Checked first so a tier flag can never widen it.
-    if (!canAccessAppPath(user?.role, item.to)) return false;
-    if (item.superAdminOnly) return isSuperAdmin;
-    if (item.marketerOnly) return isMarketer;
-    if (item.clientOnly) return isClient;
-    if (item.adminOnly) return isAdmin;
-    // The investor workspace is theirs alone — an admin inspecting an
-    // investor does it from the finance screens, not by borrowing their nav.
-    if (item.investorOnly) return isInvestor;
-    if (item.staffOnly) return !isInvestor;
-    return true;
-  });
+  const sections = useMemo(() => (hubMode ? [] : sectionsFor(user?.role)), [hubMode, user?.role]);
+  const tabs = hubMode ? null : tabsFor(pathname);
 
-  const navItems = hubMode
-    ? []
-    : filteredNav.filter((item) => !item.bottom);
-  // Links pinned below Verification / Profile (e.g. client Settings & tickets).
-  const bottomNavItems = hubMode ? [] : filteredNav.filter((item) => item.bottom);
-
-  const onLogout = async () => {
-    await logout();
-    toast.info('Signed out', 'See you soon.');
-    navigate('/login', { replace: true });
-  };
+  const toggleSection = (id: string) =>
+    setClosedSections((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
 
   // Shared link styles. When collapsed (on desktop), labels hide and icons center.
   const linkClass = (isActive: boolean) =>
     cn(
-      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
+      'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
       collapsed && 'lg:justify-center lg:px-0',
       isActive
         ? 'bg-gradient-to-r from-brand-500/80 to-brand-700/70 !text-white shadow'
@@ -247,7 +111,7 @@ export function DashboardLayout() {
           </button>
         </div>
 
-        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
+        <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-4 pt-2">
           {hubMode && (
             <EcosystemNav
               collapsed={collapsed}
@@ -255,54 +119,64 @@ export function DashboardLayout() {
               onNavigate={() => setOpen(false)}
             />
           )}
-          {!hubMode && navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => setOpen(false)}
-              title={collapsed ? item.label : undefined}
-              className={({ isActive }) => linkClass(isActive)}
-            >
-              <item.icon className="h-[18px] w-[18px] shrink-0" />
-              <span className={labelClass}>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
 
-        <div className="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
-          <NavLink
-            to="/kyc"
-            onClick={() => setOpen(false)}
-            title={collapsed ? 'Verification' : undefined}
-            className={({ isActive }) => linkClass(isActive)}
-          >
-            <ShieldCheck className="h-[18px] w-[18px] shrink-0" />
-            <span className={labelClass}>Verification</span>
-          </NavLink>
-          <NavLink
-            to="/profile"
-            onClick={() => setOpen(false)}
-            title={collapsed ? 'Profile' : undefined}
-            className={({ isActive }) => linkClass(isActive)}
-          >
-            <UserCircle className="h-[18px] w-[18px] shrink-0" />
-            <span className={labelClass}>Profile</span>
-          </NavLink>
-          {bottomNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => setOpen(false)}
-              title={collapsed ? item.label : undefined}
-              className={({ isActive }) => linkClass(isActive)}
-            >
-              <item.icon className="h-[18px] w-[18px] shrink-0" />
-              <span className={labelClass}>{item.label}</span>
-            </NavLink>
-          ))}
-        </div>
+          {sections.map((section, index) => {
+            const hasActive = section.items.some((item) => isItemActive(item, pathname));
+            // The section holding the current page never folds away, and the
+            // icon-only sidebar always shows every icon.
+            const folded =
+              !!section.label && !collapsed && closedSections.includes(section.id) && !hasActive;
+            return (
+              <div key={section.id} className={cn(index > 0 && 'mt-3')}>
+                {section.label && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.id)}
+                      aria-expanded={!folded}
+                      className={cn(
+                        'group mb-1 flex w-full items-center justify-between rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 transition hover:text-slate-300',
+                        collapsed && 'lg:hidden',
+                      )}
+                    >
+                      {section.label}
+                      <ChevronDown
+                        className={cn(
+                          'h-3.5 w-3.5 transition',
+                          folded ? '-rotate-90' : 'opacity-0 group-hover:opacity-100',
+                        )}
+                      />
+                    </button>
+                    {/* Icon-only sidebar: a thin rule stands in for the heading. */}
+                    {collapsed && (
+                      <div className="mx-3 mb-2 hidden border-t border-white/10 lg:block" />
+                    )}
+                  </>
+                )}
+                {!folded && (
+                  <div className="flex flex-col gap-0.5">
+                    {section.items.map((item) => {
+                      const active = isItemActive(item, pathname);
+                      return (
+                        <Link
+                          key={item.to + item.label}
+                          to={item.to}
+                          onClick={() => setOpen(false)}
+                          title={collapsed ? item.label : undefined}
+                          aria-current={active ? 'page' : undefined}
+                          className={linkClass(active)}
+                        >
+                          <item.icon className="h-[18px] w-[18px] shrink-0" />
+                          <span className={labelClass}>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
       </aside>
 
       {/* Backdrop (mobile) */}
@@ -332,9 +206,6 @@ export function DashboardLayout() {
           </button>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            {/* Invoices & bills live in the header rather than the sidebar:
-                they cut across investors, clients and freelancers, so they
-                belong to no single section of the nav. */}
             {/* The platform switcher. Esscentra ⇄ Ecosystem hub, the same
                 way Instagram flips between a personal account and the
                 professional dashboard. Founders and the investor only. */}
@@ -360,63 +231,23 @@ export function DashboardLayout() {
                 </span>
               </button>
             )}
-            {isAdmin && !hubMode && (
-              <NavLink
-                to="/app/finance/invoices"
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold transition sm:px-3',
-                    isActive
-                      ? 'bg-brand-500/15 text-brand-200 ring-1 ring-brand-400/30'
-                      : 'text-slate-300 hover:bg-white/10 hover:text-white',
-                  )
-                }
-                title="Invoices & Bills"
-              >
-                <ScrollText className="h-[18px] w-[18px] shrink-0" />
-                <span className="hidden md:inline">Invoices &amp; Bills</span>
-              </NavLink>
-            )}
             <NotificationBell />
-            <ThemeSwitcher />
-            <div className="hidden text-right sm:block">
-              {/* A client is dealt with as a company: show the company name,
-                  with the person's own name underneath so they still know
-                  which login they are on. */}
-              <p className="text-sm font-semibold text-white">{displayName}</p>
-              <p className="text-xs text-slate-400">
-                {user?.company ? user.name : user?.email}
-              </p>
-            </div>
-            <Avatar
-              src={user?.company?.logo ?? user?.avatarUrl}
-              name={displayName}
-            />
-            <button
-              onClick={onLogout}
-              className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
-              aria-label="Sign out"
-              title="Sign out"
-            >
-              <LogOut className="h-[18px] w-[18px]" />
-            </button>
+            {/* Profile, verification, settings, theme and sign-out. */}
+            <ProfileMenu />
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+          {tabs && <SectionTabs tabs={tabs} />}
           {/* Inside the shell, so opening a page keeps the sidebar on screen.
               The key clears a crashed page once the user navigates away. */}
-          <ErrorBoundary key={location.pathname}>
+          <ErrorBoundary key={pathname}>
             <Suspense fallback={<DashboardSkeleton />}>
               <Outlet />
             </Suspense>
           </ErrorBoundary>
         </main>
       </div>
-
-      {/* Floating quick-actions menu (Blogs / GitHub / My documents) —
-          super admin only, hidden inside the Ecosystem hub. */}
-      {isSuperAdmin && !hubMode && <QuickActions />}
     </div>
   );
 }

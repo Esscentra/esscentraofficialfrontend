@@ -161,7 +161,7 @@ export default function InvestorDashboard() {
   if (error) {
     return (
       <div>
-        <PageHeader eyebrow="Investor overview" title="Business performance" />
+        <PageHeader eyebrow="My money" title="Fund usage" />
         <EmptyState title="Couldn't load metrics" description={error} />
       </div>
     );
